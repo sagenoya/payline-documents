@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CompanyRole {
+  FRONTEND_DEVELOPER
+  BACKEND_DEVELOPER
+  PRODUCT
+  LEGAL_HEAD
+  CEO
+  COMPLIANCE
+  TRADING_LEAD
+  ACCOUNTANT
+}
+
+enum DocumentCategory {
+  HR
+  FINANCE
+  LEGAL
+  OPERATIONS
+  ENGINEERING
+}
+
+enum ActivityAction {
+  VIEW
+  DOWNLOAD
+  CREATE_DOC
+  EDIT_DOC
+  CREATE_FOLDER
+}
+
+model User {
+  id          String              @id @default(cuid())
+  clerkUserId String              @unique
+  email       String              @unique
+  name        String
+  imageUrl    String?
+  onboarded   Boolean             @default(false)
+  profile     Profile?
+  documents   Document[]          @relation("UploadedDocuments")
+  activityLogs ActivityLog[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model Profile {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  companyRole CompanyRole
+  onboardedAt DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Folder {
+  id           String        @id @default(cuid())
+  name         String
+  parentId     String?
+  parent       Folder?       @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Folder[]      @relation("FolderTree")
+  documents    Document[]
+  activityLogs ActivityLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([name, parentId])
+  @@index([parentId])
+}
+
+model Document {
+  id             String              @id @default(cuid())
+  title          String
+  description    String?
+  category       DocumentCategory
+  fileUrl        String
+  fileKey        String
+  mimeType       String
+  size           Int
+  uploadedById   String
+  uploadedBy     User                @relation("UploadedDocuments", fields: [uploadedById], references: [id], onDelete: Restrict)
+  folderId       String?
+  folder         Folder?             @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  activityLogs   ActivityLog[]
+  lastAccessedAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([category])
+  @@index([folderId])
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id         String               @id @default(cuid())
+  userId     String
+  documentId String?
+  folderId   String?
+  action     ActivityAction
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document?            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  folder     Folder?              @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  timestamp  DateTime             @default(now())
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([folderId])
+  @@index([timestamp])
+}
