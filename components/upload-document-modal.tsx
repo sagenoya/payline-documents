@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
 import { DOCUMENT_CATEGORIES, categoryLabels } from '@/lib/dms';
-import { useCreateDocument, useCreateFolder, useFolders } from '@/hooks/use-dms';
+import { useCreateDocument, useCreateFolder, useAllFolders } from '@/hooks/use-dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentCategory } from '@prisma/client';
 
@@ -24,8 +25,7 @@ export function UploadDocumentModal() {
   const open = useDmsStore((state) => state.uploadModalOpen);
   const setOpen = useDmsStore((state) => state.setUploadModalOpen);
   const activeFolderId = useDmsStore((state) => state.activeFolderId);
-  const { data: foldersData, refetch: refetchFolders } = useFolders(activeFolderId);
-  const flatFolders = foldersData?.pages.flatMap((p) => p.data) || [];
+  const { data: allFolders = [], refetch: refetchFolders } = useAllFolders();
   const createDocument = useCreateDocument();
   const createFolder = useCreateFolder(activeFolderId);
 
@@ -173,26 +173,20 @@ export function UploadDocumentModal() {
           <div>
             <label htmlFor="folder" className="mb-1.5 block text-sm font-medium">Folder</label>
             {!isCreatingFolder ? (
-              <select
-                id="folder"
-                value={form.folderId === 'CREATE_NEW' ? '' : form.folderId}
-                onChange={(event) => {
-                  if (event.target.value === 'CREATE_NEW') {
-                    setIsCreatingFolder(true);
-                  } else {
-                    setForm((current) => ({ ...current, folderId: event.target.value }));
-                  }
-                }}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-primary/70"
-              >
-                <option value="">No folder (Root)</option>
-                <option value="CREATE_NEW" className="font-semibold text-primary">+ Create new folder</option>
-                {flatFolders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
+              <>
+                <CascadingFolderSelect
+                  folders={allFolders}
+                  value={form.folderId === 'CREATE_NEW' ? null : form.folderId || null}
+                  onChange={(newId) => setForm((c) => ({ ...c, folderId: newId || '' }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingFolder(true)}
+                  className="mt-2 text-sm font-semibold text-primary hover:underline focus:outline-none"
+                >
+                  + Create new folder
+                </button>
+              </>
             ) : (
               <div className="flex gap-2">
                 <Input

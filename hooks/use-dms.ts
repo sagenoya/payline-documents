@@ -37,12 +37,22 @@ export function useFolders(parentId?: string | null) {
   });
 }
 
+export function useAllFolders() {
+  return useQuery({
+    queryKey: ['dms', 'folders', 'all'],
+    queryFn: async () => (await $api.dms.getAllFolders()).data,
+  });
+}
+
 export function useCreateFolder(parentId?: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateFolderInput) => $api.dms.createFolder(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dmsKeys.folders(parentId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+    },
   });
 }
 
@@ -76,6 +86,7 @@ export function useCreateDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
     },
   });
@@ -90,6 +101,7 @@ export function useUpdateDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
     },
   });

@@ -27,6 +27,12 @@ export class DmsModule extends FetchFactory {
     });
   }
 
+  getAllFolders(): Promise<ApiResponse<Pick<FolderSummary, 'id' | 'name' | 'parentId'>[]>> {
+    return this.call('GET', API_URLS.dms.folders, {
+      query: { all: 'true' },
+    });
+  }
+
   createFolder(data: CreateFolderInput): Promise<ApiResponse<FolderSummary>> {
     return this.call('POST', API_URLS.dms.folders, { body: data });
   }

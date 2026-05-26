@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
 import { useDmsStore } from '@/store/dms-store';
-import { useUpdateDocument, useDocuments, useFolders } from '@/hooks/use-dms';
+import { useUpdateDocument, useDocuments, useAllFolders } from '@/hooks/use-dms';
 import { categoryLabels, DOCUMENT_CATEGORIES } from '@/lib/dms';
 import type { DocumentCategory } from '@prisma/client';
 
@@ -23,7 +24,7 @@ type UploadedFile = {
 export function EditDocumentModal() {
   const { editingDocumentId, setEditingDocumentId } = useDmsStore();
   const { data: documents } = useDocuments();
-  const { data: folders } = useFolders(); // Top level folders
+  const { data: allFolders = [] } = useAllFolders();
   const updateDocument = useUpdateDocument();
 
   const [title, setTitle] = React.useState('');
@@ -36,8 +37,6 @@ export function EditDocumentModal() {
     const flatDocs = documents?.pages.flatMap((p) => p.data) || [];
     return flatDocs.find((d) => d.id === editingDocumentId);
   }, [documents, editingDocumentId]);
-
-  const flatFolders = folders?.pages.flatMap((p) => p.data) || [];
 
   React.useEffect(() => {
     if (documentToEdit) {
@@ -147,19 +146,11 @@ export function EditDocumentModal() {
 
           <div>
             <label htmlFor="edit-folder" className="mb-1.5 block text-sm font-medium">Folder</label>
-            <select
-              id="edit-folder"
-              value={folderId || 'unfiled'}
-              onChange={(e) => setFolderId(e.target.value === 'unfiled' ? null : e.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-primary/70"
-            >
-              <option value="unfiled">No folder (Root)</option>
-              {flatFolders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+              <CascadingFolderSelect
+                folders={allFolders}
+                value={folderId === 'unfiled' ? null : folderId}
+                onChange={(newId) => setFolderId(newId || 'unfiled')}
+              />
           </div>
         </div>
 

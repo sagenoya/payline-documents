@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
+import { getRecursiveFolderCounts } from '@/lib/folder-utils';
 
 async function buildBreadcrumbs(folderId: string) {
   const crumbs: Array<{ id: string; name: string }> = [];
@@ -27,13 +28,10 @@ export async function GET(
   await requireClerkUser();
   const { folderId } = await params;
 
-  const folder = await prisma.folder.findUnique({
+  const rawFolder = await prisma.folder.findUnique({
     where: { id: folderId },
     include: {
       children: {
-        include: {
-          _count: { select: { children: true, documents: true } },
-        },
         orderBy: { name: 'asc' },
       },
       documents: {
@@ -46,9 +44,24 @@ export async function GET(
     },
   });
 
-  if (!folder) {
+  if (!rawFolder) {
     return jsonError('Folder not found', 404);
   }
+
+  const recursiveCounts = await getRecursiveFolderCounts(rawFolder.children.map(f => f.id));
+  const folder = {
+    ...rawFolder,
+    children: rawFolder.children.map(f => {
+      const counts = recursiveCounts.get(f.id);
+      return {
+        ...f,
+        _count: {
+          children: counts?.folders || 0,
+          documents: counts?.docs || 0,
+        }
+      };
+    })
+  };
 
   return jsonOk({
     ...folder,
