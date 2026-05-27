@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { canDeleteFolder } from '@/lib/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { getRecursiveFolderCounts } from '@/lib/folder-utils';
 
@@ -67,4 +68,39 @@ export async function GET(
     ...folder,
     breadcrumbs: await buildBreadcrumbs(folderId),
   });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ folderId: string }> },
+) {
+  const user = await requireClerkUser();
+  const { folderId } = await params;
+
+  if (!canDeleteFolder(user.profile?.companyRole)) {
+    return jsonError('Only a Frontend Developer can delete folders.', 403);
+  }
+
+  const folder = await prisma.folder.findUnique({
+    where: { id: folderId },
+    include: {
+      _count: {
+        select: { children: true, documents: true },
+      },
+    },
+  });
+
+  if (!folder) {
+    return jsonError('Folder not found', 404);
+  }
+
+  if (folder._count.children > 0 || folder._count.documents > 0) {
+    return jsonError('Only empty folders can be deleted. Move or delete nested folders and documents first.', 409);
+  }
+
+  await prisma.folder.delete({
+    where: { id: folderId },
+  });
+
+  return jsonOk({ id: folderId });
 }

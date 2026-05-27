@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { canDeleteDocument } from '@/lib/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 
 export async function GET(
@@ -86,4 +87,37 @@ export async function PATCH(
   });
 
   return jsonOk(updatedDocument);
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ documentId: string }> },
+) {
+  const user = await requireClerkUser();
+  const { documentId } = await params;
+
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { id: true, uploadedById: true },
+  });
+
+  if (!document) {
+    return jsonError('Document not found', 404);
+  }
+
+  if (
+    !canDeleteDocument({
+      userId: user.id,
+      uploadedById: document.uploadedById,
+      role: user.profile?.companyRole,
+    })
+  ) {
+    return jsonError('Only the uploader or a Frontend Developer can delete this document.', 403);
+  }
+
+  await prisma.document.delete({
+    where: { id: documentId },
+  });
+
+  return jsonOk({ id: documentId });
 }

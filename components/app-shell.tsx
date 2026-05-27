@@ -1,17 +1,25 @@
 'use client';
 
 import type * as React from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import { Activity, FileSearch, Files, FolderOpen, LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UploadDocumentModal } from '@/components/upload-document-modal';
 import { useProfile } from '@/hooks/use-dms';
 import { cn } from '@/lib/utils';
 import { useDmsStore } from '@/store/dms-store';
 
-import { EditDocumentModal } from '@/components/edit-document-modal';
+const UploadDocumentModal = dynamic(
+  () => import('@/components/upload-document-modal').then((mod) => mod.UploadDocumentModal),
+  { ssr: false },
+);
+
+const EditDocumentModal = dynamic(
+  () => import('@/components/edit-document-modal').then((mod) => mod.EditDocumentModal),
+  { ssr: false },
+);
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -24,6 +32,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: profile } = useProfile();
   const setUploadModalOpen = useDmsStore((state) => state.setUploadModalOpen);
+  const uploadModalOpen = useDmsStore((state) => state.uploadModalOpen);
+  const editingDocument = useDmsStore((state) => state.editingDocument);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -103,8 +113,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <UploadDocumentModal />
-      <EditDocumentModal />
+      {uploadModalOpen && <UploadDocumentModal />}
+      {editingDocument && <EditDocumentModal />}
     </div>
   );
 }

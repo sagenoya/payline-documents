@@ -5,13 +5,19 @@ import { Search } from 'lucide-react';
 import { DocumentList } from '@/components/document-list';
 import { Input } from '@/components/ui/input';
 import { useDocuments } from '@/hooks/use-dms';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Loader } from '@/components/ui/loader';
 
 export function SearchPageClient() {
   const [search, setSearch] = React.useState('');
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useDocuments({ search: search || undefined });
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const searchEnabled = debouncedSearch.length > 0;
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useDocuments(
+    { search: debouncedSearch || undefined },
+    { enabled: searchEnabled },
+  );
 
-  const flatDocuments = data?.pages.flatMap((p) => p.data) || [];
+  const flatDocuments = searchEnabled ? data?.pages.flatMap((p) => p.data) || [] : [];
 
   return (
     <div className="space-y-5">
@@ -27,11 +33,11 @@ export function SearchPageClient() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Start typing to search documents"
-          className="pl-9"
+          className="pl-9 focus-visible:ring-0 focus-visible:border-foreground/30"
         />
       </div>
 
-      {isLoading ? (
+      {searchEnabled && isLoading ? (
         <Loader text="Searching..." />
       ) : (
         <div className="space-y-4">

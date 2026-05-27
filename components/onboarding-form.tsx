@@ -14,6 +14,7 @@ export function OnboardingForm() {
   const mutation = useUpdateProfile();
   const [selectedRole, setSelectedRole] = React.useState<string>('FRONTEND_DEVELOPER');
   const [error, setError] = React.useState<string | null>(null);
+  const isSubmitting = mutation.isPending || isTransitionPending;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,8 +37,19 @@ export function OnboardingForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-2xl rounded-lg border bg-background p-6 shadow-sm"
+      className="relative w-full max-w-2xl overflow-hidden rounded-lg border bg-background p-6 shadow-sm"
     >
+      {isSubmitting && (
+        <div className="absolute inset-0 z-10 grid place-items-center bg-background/90">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="size-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+            <div>
+              <p className="font-medium text-foreground">Opening dashboard</p>
+              <small>Finishing your workspace setup...</small>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-6">
         <h1>Set your company role</h1>
         <p className="mt-2">
@@ -71,8 +83,8 @@ export function OnboardingForm() {
             {error}
           </p>
         )}
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving...' : 'Continue'}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : 'Continue'}
         </Button>
       </div>
     </form>

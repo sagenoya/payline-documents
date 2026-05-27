@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { FileUp, FolderPlus, Loader2, CheckCircle2, UploadCloud } from 'lucide-react';
+import { Loader2, CheckCircle2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -25,14 +25,14 @@ export function UploadDocumentModal() {
   const open = useDmsStore((state) => state.uploadModalOpen);
   const setOpen = useDmsStore((state) => state.setUploadModalOpen);
   const activeFolderId = useDmsStore((state) => state.activeFolderId);
-  const { data: allFolders = [], refetch: refetchFolders } = useAllFolders();
+  const { data: allFolders = [], refetch: refetchFolders } = useAllFolders({ enabled: open });
   const createDocument = useCreateDocument();
   const createFolder = useCreateFolder(activeFolderId);
 
   const [uploadedFile, setUploadedFile] = React.useState<UploadedFile | null>(null);
   
   // Folder creation state
-  const [isCreatingFolder, setIsCreatingFolder] = React.useState(false);
+  const [creatingParentId, setCreatingParentId] = React.useState<string | null | undefined>(undefined);
   const [folderName, setFolderName] = React.useState('');
 
   const [form, setForm] = React.useState({
@@ -72,18 +72,18 @@ export function UploadDocumentModal() {
     setUploadedFile(null);
     setForm({ title: '', description: '', category: 'OPERATIONS', folderId: activeFolderId || '' });
     setFolderName('');
-    setIsCreatingFolder(false);
+    setCreatingParentId(undefined);
   }
 
-  async function handleCreateFolder() {
+  async function handleCreateFolder(parentId: string | null) {
     if (!folderName.trim()) return;
     try {
-      const response = await createFolder.mutateAsync({ name: folderName.trim(), parentId: activeFolderId });
+      const response = await createFolder.mutateAsync({ name: folderName.trim(), parentId });
       await refetchFolders();
       setForm((current) => ({ ...current, folderId: response.data.id }));
       toast.success('Folder created successfully');
       setFolderName('');
-      setIsCreatingFolder(false);
+      setCreatingParentId(undefined);
     } catch (error) {
       toast.error('Failed to create folder');
     }
@@ -131,7 +131,7 @@ export function UploadDocumentModal() {
             value={form.title}
             onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
             placeholder="Board minutes, employee handbook, vendor agreement"
-            className="focus-visible:ring-0 focus-visible:border-primary/70"
+            className="focus-visible:ring-0 focus-visible:border-foreground/30"
           />
         </div>
 
@@ -143,7 +143,7 @@ export function UploadDocumentModal() {
             onChange={(event) =>
               setForm((current) => ({ ...current, description: event.target.value }))
             }
-            className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-0 focus-visible:border-primary/70"
+            className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
             placeholder="Optional context for teammates"
           />
         </div>
@@ -160,7 +160,7 @@ export function UploadDocumentModal() {
                   category: event.target.value as DocumentCategory,
                 }))
               }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-primary/70"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
             >
               {DOCUMENT_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
@@ -172,49 +172,24 @@ export function UploadDocumentModal() {
 
           <div>
             <label htmlFor="folder" className="mb-1.5 block text-sm font-medium">Folder</label>
-            {!isCreatingFolder ? (
-              <>
-                <CascadingFolderSelect
-                  folders={allFolders}
-                  value={form.folderId === 'CREATE_NEW' ? null : form.folderId || null}
-                  onChange={(newId) => setForm((c) => ({ ...c, folderId: newId || '' }))}
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingFolder(true)}
-                  className="mt-2 text-sm font-semibold text-primary hover:underline focus:outline-none"
-                >
-                  + Create new folder
-                </button>
-              </>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  autoFocus
-                  value={folderName}
-                  onChange={(event) => setFolderName(event.target.value)}
-                  placeholder="New folder name"
-                  className="focus-visible:ring-0 focus-visible:border-primary/70"
-                />
-                <Button 
-                  type="button" 
-                  onClick={handleCreateFolder}
-                  disabled={createFolder.isPending || !folderName.trim()}
-                >
-                  {createFolder.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Create'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={() => {
-                    setIsCreatingFolder(false);
-                    setFolderName('');
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
+            <CascadingFolderSelect
+              folders={allFolders}
+              value={form.folderId || null}
+              onChange={(newId) => setForm((c) => ({ ...c, folderId: newId || '' }))}
+              creatingParentId={creatingParentId}
+              createFolderName={folderName}
+              isCreatingFolder={createFolder.isPending}
+              onStartCreate={(parentId) => {
+                setCreatingParentId(parentId);
+                setFolderName('');
+              }}
+              onCancelCreate={() => {
+                setCreatingParentId(undefined);
+                setFolderName('');
+              }}
+              onCreateFolderNameChange={setFolderName}
+              onCreateFolder={handleCreateFolder}
+            />
           </div>
         </div>
 

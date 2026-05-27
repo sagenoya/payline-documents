@@ -28,19 +28,22 @@ export function useUpdateProfile() {
   });
 }
 
-export function useFolders(parentId?: string | null) {
+export function useFolders(parentId?: string | null, options?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: dmsKeys.folders(parentId),
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => (await $api.dms.getFolders(parentId, pageParam)).data,
     getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined),
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useAllFolders() {
+export function useAllFolders(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['dms', 'folders', 'all'],
     queryFn: async () => (await $api.dms.getAllFolders()).data,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -69,12 +72,13 @@ export function useDocuments(query?: {
   folderId?: string;
   recent?: boolean;
   take?: number;
-}) {
+}, options?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: dmsKeys.documents(query),
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => (await $api.dms.getDocuments({ ...query, page: pageParam })).data,
     getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined),
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -100,6 +104,33 @@ export function useUpdateDocument() {
       $api.dms.updateDocument(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+    },
+  });
+}
+
+export function useDeleteDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (documentId: string) => $api.dms.deleteDocument(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+    },
+  });
+}
+
+export function useDeleteFolder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (folderId: string) => $api.dms.deleteFolder(folderId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });

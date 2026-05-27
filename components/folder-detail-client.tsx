@@ -68,7 +68,7 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
               placeholder="Filter folders & files..." 
-              className="pl-9" 
+              className="pl-9 focus-visible:ring-0 focus-visible:border-foreground/30" 
             />
           </div>
           <CreateFolderButton parentId={folderId} parentName={folder.name} />

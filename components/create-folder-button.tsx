@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useCreateFolder, useFolders } from '@/hooks/use-dms';
+import { useCreateFolder } from '@/hooks/use-dms';
 
 export function CreateFolderButton({ 
   parentId, 
@@ -18,7 +18,6 @@ export function CreateFolderButton({
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState('');
   
-  const { refetch: refetchFolders } = useFolders(parentId);
   const createFolder = useCreateFolder(parentId);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -27,7 +26,6 @@ export function CreateFolderButton({
 
     try {
       await createFolder.mutateAsync({ name: name.trim(), parentId });
-      await refetchFolders();
       toast.success('Folder created successfully');
       setOpen(false);
       setName('');
@@ -59,7 +57,7 @@ export function CreateFolderButton({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Q3 Financials"
-              className="focus-visible:ring-0 focus-visible:border-primary/70"
+              className="focus-visible:ring-0 focus-visible:border-foreground/30"
             />
           </div>
 

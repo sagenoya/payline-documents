@@ -23,8 +23,8 @@ const sizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
   sm: 'sm:max-w-sm',
   md: 'sm:max-w-md',
   lg: 'sm:max-w-lg',
-  xl: 'sm:max-w-xl',
-  '2xl': 'sm:max-w-2xl',
+  xl: 'sm:max-w-2xl',
+  '2xl': 'sm:max-w-3xl',
   full: 'sm:max-w-[95vw]',
 };
 
@@ -67,7 +67,7 @@ export function Modal({
       }, 50);
       return () => clearTimeout(timer);
     } else {
-      const timer = setTimeout(() => setShow(false), 200);
+      const timer = setTimeout(() => setShow(false), 120);
       document.body.style.overflow = '';
       return () => clearTimeout(timer);
     }
@@ -83,7 +83,7 @@ export function Modal({
   return createPortal(
     <div 
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-200 ease-out",
+        "fixed inset-0 z-50 flex items-center justify-center bg-black/35 transition-opacity duration-150 ease-out",
         open ? "opacity-100" : "opacity-0"
       )}
       onClick={(e) => {
@@ -94,7 +94,7 @@ export function Modal({
     >
       <div 
         className={cn(
-          "relative z-50 flex w-full max-h-[90vh] flex-col overflow-hidden rounded-xl bg-background p-0 text-left shadow-2xl transition-all duration-200 ease-out m-4 border ring-1 ring-foreground/5",
+          "relative z-50 flex w-full max-h-[90vh] flex-col overflow-hidden rounded-xl bg-background p-0 text-left shadow-xl transition-all duration-150 ease-out m-4 border ring-1 ring-foreground/5",
           sizeClasses[size],
           className,
           open ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-2 opacity-0"

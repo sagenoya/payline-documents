@@ -1,18 +1,30 @@
 'use client';
 
-import { Download, Eye, Pencil } from 'lucide-react';
+import * as React from 'react';
+import { Download, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLogDocumentAccess, useProfile } from '@/hooks/use-dms';
+import { DeleteConfirmation } from '@/components/delete-confirmation';
+import { useDeleteDocument, useLogDocumentAccess, useProfile } from '@/hooks/use-dms';
+import { canDeleteDocument } from '@/lib/dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
 import { toast } from 'sonner';
 
 export function DocumentActions({ document }: { document: DocumentSummary }) {
   const logAccess = useLogDocumentAccess();
+  const deleteDocument = useDeleteDocument();
   const { data: user } = useProfile();
-  const setEditingDocumentId = useDmsStore((s) => s.setEditingDocumentId);
+  const setEditingDocument = useDmsStore((s) => s.setEditingDocument);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const canEdit = user?.id === document.uploadedById || user?.profile?.companyRole === 'CEO';
+  const canDelete =
+    !!user &&
+    canDeleteDocument({
+      userId: user.id,
+      uploadedById: document.uploadedById,
+      role: user.profile?.companyRole,
+    });
 
   async function downloadBlob() {
     try {
@@ -42,34 +54,66 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
     window.open(document.fileUrl, '_blank');
   }
 
+  async function handleDelete() {
+    try {
+      await deleteDocument.mutateAsync(document.id);
+      toast.success('Document deleted');
+      setDeleteOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete document');
+    }
+  }
+
   return (
-    <div className="flex items-center justify-end gap-1">
-      {canEdit && (
+    <>
+      <div className="flex items-center justify-end gap-1">
+        {canEdit && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Edit ${document.title}`}
+            onClick={() => setEditingDocument(document)}
+          >
+            <Pencil className="size-4" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={`Edit ${document.title}`}
-          onClick={() => setEditingDocumentId(document.id)}
+          aria-label={`Preview ${document.title}`}
+          onClick={() => openDocument('VIEW')}
         >
-          <Pencil className="size-4" />
+          <Eye className="size-4" />
         </Button>
-      )}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Preview ${document.title}`}
-        onClick={() => openDocument('VIEW')}
-      >
-        <Eye className="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Download ${document.title}`}
-        onClick={() => openDocument('DOWNLOAD')}
-      >
-        <Download className="size-4" />
-      </Button>
-    </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Download ${document.title}`}
+          onClick={() => openDocument('DOWNLOAD')}
+        >
+          <Download className="size-4" />
+        </Button>
+        {canDelete && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${document.title}`}
+            onClick={() => setDeleteOpen(true)}
+            disabled={deleteDocument.isPending}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+      </div>
+
+      <DeleteConfirmation
+        open={deleteOpen}
+        title="Delete document?"
+        description={`Delete "${document.title}"? This removes the file record from Payline Docs and cannot be undone.`}
+        isPending={deleteDocument.isPending}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

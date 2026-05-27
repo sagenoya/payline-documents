@@ -50,3 +50,15 @@ export const categoryLabels: Record<DocumentCategory, string> = {
 export function canUpload(role?: CompanyRole | null) {
   return Boolean(role && UPLOAD_ALLOWED_ROLES.has(role));
 }
+
+export function canDeleteDocument(params: {
+  userId: string;
+  uploadedById: string;
+  role?: CompanyRole | null;
+}) {
+  return params.userId === params.uploadedById || params.role === 'FRONTEND_DEVELOPER';
+}
+
+export function canDeleteFolder(role?: CompanyRole | null) {
+  return role === 'FRONTEND_DEVELOPER';
+}

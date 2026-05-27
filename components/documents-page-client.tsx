@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { DocumentList } from '@/components/document-list';
 import { Input } from '@/components/ui/input';
 import { useDocuments } from '@/hooks/use-dms';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { DOCUMENT_CATEGORIES, categoryLabels } from '@/lib/dms';
 
 import { Loader } from '@/components/ui/loader';
@@ -12,8 +13,9 @@ import { Loader } from '@/components/ui/loader';
 export function DocumentsPageClient() {
   const [search, setSearch] = React.useState('');
   const [category, setCategory] = React.useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useDocuments({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     category: category || undefined,
   });
 
@@ -33,13 +35,13 @@ export function DocumentsPageClient() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search documents, descriptions, or uploaders"
-            className="pl-9"
+            className="pl-9 focus-visible:ring-0 focus-visible:border-foreground/30"
           />
         </div>
         <select
           value={category}
           onChange={(event) => setCategory(event.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
         >
           <option value="">All categories</option>
           {DOCUMENT_CATEGORIES.map((item) => (

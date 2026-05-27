@@ -2,56 +2,65 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 
 export async function requireClerkUser() {
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
 
   if (!userId) {
     throw new Response('Unauthorized', { status: 401 });
   }
 
-  const clerkUser = await currentUser();
+  const existingUser = await prisma.user.findUnique({
+    where: { clerkUserId: userId },
+    include: { profile: true },
+  });
 
-  if (!clerkUser) {
-    throw new Response('Unauthorized', { status: 401 });
+  if (existingUser) {
+    return existingUser;
   }
 
-  const email = clerkUser.emailAddresses[0]?.emailAddress;
+  const claims = sessionClaims as Record<string, unknown> | null;
+  let email =
+    (claims?.email as string | undefined) ||
+    (claims?.primary_email_address as string | undefined);
+  let name =
+    (claims?.full_name as string | undefined) ||
+    [claims?.first_name, claims?.last_name].filter(Boolean).join(' ') ||
+    undefined;
+  let imageUrl =
+    (claims?.image_url as string | undefined) ||
+    (claims?.picture as string | undefined);
+
+  if (!email) {
+    const clerkUser = await currentUser();
+
+    if (!clerkUser) {
+      throw new Response('Unauthorized', { status: 401 });
+    }
+
+    email = clerkUser.emailAddresses[0]?.emailAddress;
+    name =
+      clerkUser.fullName ||
+      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
+      undefined;
+    imageUrl = clerkUser.imageUrl;
+  }
 
   if (!email) {
     throw new Response('Clerk user is missing an email address', { status: 422 });
   }
 
-  const name =
-    clerkUser.fullName ||
-    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
-    email.split('@')[0];
+  const resolvedName = name || email.split('@')[0];
 
   let user;
   try {
-    user = await prisma.user.findUnique({
-      where: { clerkUserId: userId },
+    user = await prisma.user.create({
+      data: {
+        clerkUserId: userId,
+        email,
+        name: resolvedName,
+        imageUrl,
+      },
       include: { profile: true },
     });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          clerkUserId: userId,
-          email,
-          name,
-          imageUrl: clerkUser.imageUrl,
-        },
-        include: { profile: true },
-      });
-    } else {
-      user = await prisma.user.update({
-        where: { clerkUserId: userId },
-        data: {
-          name,
-          imageUrl: clerkUser.imageUrl,
-        },
-        include: { profile: true },
-      });
-    }
   } catch (error: any) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       user = await prisma.user.findUnique({

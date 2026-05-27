@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
 import { useDmsStore } from '@/store/dms-store';
-import { useUpdateDocument, useDocuments, useAllFolders } from '@/hooks/use-dms';
+import { useUpdateDocument, useAllFolders } from '@/hooks/use-dms';
 import { categoryLabels, DOCUMENT_CATEGORIES } from '@/lib/dms';
 import type { DocumentCategory } from '@prisma/client';
 
@@ -22,9 +22,9 @@ type UploadedFile = {
 };
 
 export function EditDocumentModal() {
-  const { editingDocumentId, setEditingDocumentId } = useDmsStore();
-  const { data: documents } = useDocuments();
-  const { data: allFolders = [] } = useAllFolders();
+  const { editingDocument, setEditingDocument } = useDmsStore();
+  const isOpen = !!editingDocument;
+  const { data: allFolders = [] } = useAllFolders({ enabled: isOpen });
   const updateDocument = useUpdateDocument();
 
   const [title, setTitle] = React.useState('');
@@ -33,20 +33,15 @@ export function EditDocumentModal() {
   const [folderId, setFolderId] = React.useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = React.useState<UploadedFile | null>(null);
 
-  const documentToEdit = React.useMemo(() => {
-    const flatDocs = documents?.pages.flatMap((p) => p.data) || [];
-    return flatDocs.find((d) => d.id === editingDocumentId);
-  }, [documents, editingDocumentId]);
-
   React.useEffect(() => {
-    if (documentToEdit) {
-      setTitle(documentToEdit.title);
-      setDescription(documentToEdit.description || '');
-      setCategory(documentToEdit.category);
-      setFolderId(documentToEdit.folderId || null);
+    if (editingDocument) {
+      setTitle(editingDocument.title);
+      setDescription(editingDocument.description || '');
+      setCategory(editingDocument.category);
+      setFolderId(editingDocument.folderId || null);
       setUploadedFile(null); // Reset when a new document is selected
     }
-  }, [documentToEdit]);
+  }, [editingDocument]);
 
   const { startUpload, isUploading } = useUploadThing('documentUploader', {
     onClientUploadComplete: (files) => {
@@ -68,11 +63,11 @@ export function EditDocumentModal() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editingDocumentId) return;
+    if (!editingDocument) return;
 
     try {
       await updateDocument.mutateAsync({
-        id: editingDocumentId,
+        id: editingDocument.id,
         data: {
           title,
           description: description || null,
@@ -88,14 +83,13 @@ export function EditDocumentModal() {
       });
 
       toast.success('Document updated successfully');
-      setEditingDocumentId(null);
+      setEditingDocument(null);
     } catch (error) {
       toast.error('Failed to update document');
     }
   }
 
-  const isOpen = !!editingDocumentId;
-  const close = () => setEditingDocumentId(null);
+  const close = () => setEditingDocument(null);
 
   return (
     <Modal
@@ -148,8 +142,8 @@ export function EditDocumentModal() {
             <label htmlFor="edit-folder" className="mb-1.5 block text-sm font-medium">Folder</label>
               <CascadingFolderSelect
                 folders={allFolders}
-                value={folderId === 'unfiled' ? null : folderId}
-                onChange={(newId) => setFolderId(newId || 'unfiled')}
+                value={folderId}
+                onChange={(newId) => setFolderId(newId)}
               />
           </div>
         </div>
