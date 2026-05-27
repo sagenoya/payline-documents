@@ -95,8 +95,8 @@ export function EditDocumentModal() {
     <Modal
       open={isOpen}
       onOpenChange={(o) => !o && close()}
-      title="Edit Document"
-      description="Update document details."
+      title="Edit or move document"
+      description="Update document details, replace the file, or move it to another folder."
       size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -107,7 +107,7 @@ export function EditDocumentModal() {
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="focus-visible:ring-0 focus-visible:border-primary/70"
+            className="focus-visible:ring-0 focus-visible:border-foreground/30"
           />
         </div>
 
@@ -117,7 +117,7 @@ export function EditDocumentModal() {
             id="edit-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-0 focus-visible:border-primary/70"
+            className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
           />
         </div>
 
@@ -128,7 +128,7 @@ export function EditDocumentModal() {
               id="edit-category"
               value={category} 
               onChange={(e) => setCategory(e.target.value as DocumentCategory)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-primary/70"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
             >
               {DOCUMENT_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -139,7 +139,7 @@ export function EditDocumentModal() {
           </div>
 
           <div>
-            <label htmlFor="edit-folder" className="mb-1.5 block text-sm font-medium">Folder</label>
+            <label htmlFor="edit-folder" className="mb-1.5 block text-sm font-medium">Move to folder</label>
               <CascadingFolderSelect
                 folders={allFolders}
                 value={folderId}
@@ -215,7 +215,7 @@ export function EditDocumentModal() {
           </Button>
           <Button type="submit" disabled={updateDocument.isPending}>
             {updateDocument.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Save Changes
+            Save changes
           </Button>
         </div>
       </form>

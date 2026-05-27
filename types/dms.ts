@@ -65,6 +65,8 @@ export type ActivityLogType = {
   documentId?: string | null;
   folderId?: string | null;
   action: ActivityAction;
+  targetName?: string | null;
+  targetType?: string | null;
   user: BasicUser;
   document?: Pick<DocumentSummary, 'id' | 'title' | 'category' | 'fileUrl' | 'mimeType'> | null;
   folder?: Pick<FolderSummary, 'id' | 'name'> | null;
@@ -84,6 +86,10 @@ export type CreateDocumentInput = {
 
 export type CreateFolderInput = {
   name: string;
+  parentId?: string | null;
+};
+
+export type UpdateFolderInput = {
   parentId?: string | null;
 };
 

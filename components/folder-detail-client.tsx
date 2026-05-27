@@ -7,12 +7,25 @@ import { Input } from '@/components/ui/input';
 import { DocumentList } from '@/components/document-list';
 import { FolderGrid } from '@/components/folder-grid';
 import { CreateFolderButton } from '@/components/create-folder-button';
-import { useFolder } from '@/hooks/use-dms';
+import { useDocuments, useFolder } from '@/hooks/use-dms';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Loader } from '@/components/ui/loader';
 
 export function FolderDetailClient({ folderId }: { folderId: string }) {
   const { data: folder, isLoading } = useFolder(folderId);
   const [search, setSearch] = React.useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const {
+    data: documentsData,
+    isLoading: documentsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useDocuments({
+    folderId,
+    search: debouncedSearch || undefined,
+    take: 15,
+  });
 
   const filteredFolders = React.useMemo(() => {
     if (!folder?.children) return [];
@@ -21,15 +34,7 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
     return folder.children.filter((f) => f.name.toLowerCase().includes(lower));
   }, [folder?.children, search]);
 
-  const filteredDocuments = React.useMemo(() => {
-    if (!folder?.documents) return [];
-    if (!search.trim()) return folder.documents;
-    const lower = search.toLowerCase();
-    return folder.documents.filter((d) => 
-      d.title.toLowerCase().includes(lower) || 
-      (d.description && d.description.toLowerCase().includes(lower))
-    );
-  }, [folder?.documents, search]);
+  const documents = documentsData?.pages.flatMap((page) => page.data) || [];
 
   if (isLoading) {
     return <Loader text="Loading folder..." />;
@@ -76,7 +81,22 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
       </div>
 
       <FolderGrid folders={filteredFolders} />
-      <DocumentList documents={filteredDocuments} emptyText={search ? "No documents match your filter." : "No documents in this folder yet."} />
+      {documentsLoading ? (
+        <Loader text="Loading documents..." />
+      ) : (
+        <div className="space-y-4">
+          <DocumentList documents={documents} emptyText={search ? 'No documents match your filter.' : 'No documents in this folder yet.'} />
+          {hasNextPage && (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="w-full rounded-md border bg-muted/50 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              {isFetchingNextPage ? 'Loading more...' : 'Load more'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

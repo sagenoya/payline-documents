@@ -13,7 +13,7 @@ export function SearchPageClient() {
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const searchEnabled = debouncedSearch.length > 0;
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useDocuments(
-    { search: debouncedSearch || undefined },
+    { search: debouncedSearch || undefined, take: 15 },
     { enabled: searchEnabled },
   );
 

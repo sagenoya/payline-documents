@@ -17,6 +17,7 @@ export function DocumentsPageClient() {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useDocuments({
     search: debouncedSearch || undefined,
     category: category || undefined,
+    take: 15,
   });
 
   const flatDocuments = data?.pages.flatMap((p) => p.data) || [];

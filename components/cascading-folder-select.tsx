@@ -73,7 +73,7 @@ export function CascadingFolderSelect({
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30 disabled:opacity-50"
               >
                 <option value="">
-                  {parentId === null ? 'No folder (Root)' : `Use ${parentLabel}`}
+                  {parentId === null ? 'No folder (Root)' : `${parentLabel} (selected)`}
                 </option>
                 {levelFolders.map((folder) => (
                   <option key={folder.id} value={folder.id}>

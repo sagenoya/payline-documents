@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { $api } from '@/repository';
-import type { CreateDocumentInput, CreateFolderInput } from '@/types/dms';
+import type { CreateDocumentInput, CreateFolderInput, UpdateFolderInput } from '@/types/dms';
 
 export const dmsKeys = {
   profile: ['dms', 'profile'] as const,
@@ -130,6 +130,20 @@ export function useDeleteFolder() {
 
   return useMutation({
     mutationFn: (folderId: string) => $api.dms.deleteFolder(folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+    },
+  });
+}
+
+export function useUpdateFolder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateFolderInput }) =>
+      $api.dms.updateFolder(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });

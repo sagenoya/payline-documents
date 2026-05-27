@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { canDeleteDocument } from '@/lib/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
+import { logActivity } from '@/server/activity';
+import type { DocumentCategory } from '@prisma/client';
+import { z } from 'zod';
 
 export async function GET(
   _request: Request,
@@ -29,9 +32,6 @@ export async function GET(
   return jsonOk(document);
 }
 
-import type { DocumentCategory } from '@prisma/client';
-import { z } from 'zod';
-
 const documentEditSchema = z.object({
   title: z.string().min(1, 'Title is required').optional(),
   description: z.string().nullable().optional(),
@@ -52,7 +52,7 @@ export async function PATCH(
 
   const document = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { id: true, uploadedById: true },
+    select: { id: true, title: true, folderId: true, uploadedById: true },
   });
 
   if (!document) {
@@ -70,6 +70,10 @@ export async function PATCH(
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid update data', 422);
   }
 
+  const isMoving =
+    Object.prototype.hasOwnProperty.call(parsed.data, 'folderId') &&
+    parsed.data.folderId !== document.folderId;
+
   const updatedDocument = await prisma.document.update({
     where: { id: documentId },
     data: {
@@ -78,12 +82,12 @@ export async function PATCH(
     },
   });
 
-  await prisma.activityLog.create({
-    data: {
-      userId: user.id,
-      documentId: updatedDocument.id,
-      action: 'EDIT_DOC',
-    },
+  await logActivity({
+    userId: user.id,
+    documentId: updatedDocument.id,
+    action: isMoving ? 'MOVE_DOC' : 'EDIT_DOC',
+    targetName: updatedDocument.title,
+    targetType: 'DOCUMENT',
   });
 
   return jsonOk(updatedDocument);
@@ -98,7 +102,7 @@ export async function DELETE(
 
   const document = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { id: true, uploadedById: true },
+    select: { id: true, title: true, uploadedById: true },
   });
 
   if (!document) {
@@ -115,9 +119,19 @@ export async function DELETE(
     return jsonError('Only the uploader or a Frontend Developer can delete this document.', 403);
   }
 
-  await prisma.document.delete({
-    where: { id: documentId },
-  });
+  await prisma.$transaction([
+    prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        action: 'DELETE_DOC',
+        targetName: document.title,
+        targetType: 'DOCUMENT',
+      },
+    }),
+    prisma.document.delete({
+      where: { id: documentId },
+    }),
+  ]);
 
   return jsonOk({ id: documentId });
 }

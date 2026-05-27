@@ -30,7 +30,11 @@ enum ActivityAction {
   DOWNLOAD
   CREATE_DOC
   EDIT_DOC
+  MOVE_DOC
+  DELETE_DOC
   CREATE_FOLDER
+  MOVE_FOLDER
+  DELETE_FOLDER
 }
 
 model User {
@@ -102,9 +106,11 @@ model ActivityLog {
   documentId String?
   folderId   String?
   action     ActivityAction
+  targetName String?
+  targetType String?
   user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  document   Document?            @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  folder     Folder?              @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  document   Document?            @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  folder     Folder?              @relation(fields: [folderId], references: [id], onDelete: SetNull)
   timestamp  DateTime             @default(now())
 
   @@index([userId])

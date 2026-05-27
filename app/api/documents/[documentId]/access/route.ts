@@ -2,6 +2,7 @@ import type { ActivityAction } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { documentAccessSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
+import { logActivity } from '@/server/activity';
 
 export async function POST(
   request: Request,
@@ -17,26 +18,25 @@ export async function POST(
 
   const exists = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { id: true },
+    select: { id: true, title: true },
   });
 
   if (!exists) {
     return jsonError('Document not found', 404);
   }
 
-  const [log] = await prisma.$transaction([
-    prisma.activityLog.create({
-      data: {
-        documentId,
-        userId: user.id,
-        action: parsed.data.action as ActivityAction,
-      },
-    }),
-    prisma.document.update({
+  await prisma.document.update({
       where: { id: documentId },
       data: { lastAccessedAt: new Date() },
-    }),
-  ]);
+  });
 
-  return jsonOk(log, { status: 201 });
+  await logActivity({
+    documentId,
+    userId: user.id,
+    action: parsed.data.action as ActivityAction,
+    targetName: exists.title,
+    targetType: 'DOCUMENT',
+  });
+
+  return jsonOk({ documentId, action: parsed.data.action }, { status: 201 });
 }

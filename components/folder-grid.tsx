@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Folder, Trash2 } from 'lucide-react';
+import { Folder, FolderInput, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
+import { MoveFolderModal } from '@/components/move-folder-modal';
 import { useDeleteFolder, useProfile } from '@/hooks/use-dms';
 import { canDeleteFolder } from '@/lib/dms';
 import type { FolderSummary } from '@/types/dms';
@@ -15,6 +16,7 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
   const deleteFolder = useDeleteFolder();
   const canDelete = canDeleteFolder(user?.profile?.companyRole);
   const [folderToDelete, setFolderToDelete] = React.useState<FolderSummary | null>(null);
+  const [folderToMove, setFolderToMove] = React.useState<FolderSummary | null>(null);
 
   if (!folders.length) return null;
 
@@ -53,17 +55,27 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
             </Link>
 
             {canDelete && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition group-hover:opacity-100 focus:opacity-100"
-                aria-label={`Delete ${folder.name}`}
-                disabled={deleteFolder.isPending}
-                onClick={() => setFolderToDelete(folder)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Move ${folder.name}`}
+                  onClick={() => setFolderToMove(folder)}
+                >
+                  <FolderInput className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Delete ${folder.name}`}
+                  disabled={deleteFolder.isPending}
+                  onClick={() => setFolderToDelete(folder)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
             )}
           </div>
         ))}
@@ -80,6 +92,14 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
         isPending={deleteFolder.isPending}
         onCancel={() => setFolderToDelete(null)}
         onConfirm={handleDelete}
+      />
+
+      <MoveFolderModal
+        folder={folderToMove}
+        open={!!folderToMove}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setFolderToMove(null);
+        }}
       />
     </>
   );

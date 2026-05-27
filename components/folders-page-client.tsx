@@ -24,7 +24,7 @@ export function FoldersPageClient() {
     fetchNextPage: fetchNextDocuments,
     hasNextPage: hasNextDocuments,
     isFetchingNextPage: isFetchingDocuments
-  } = useDocuments({ take: 15 });
+  } = useDocuments({ recent: true, take: 15 });
   
   const [search, setSearch] = React.useState('');
 

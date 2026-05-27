@@ -26,7 +26,17 @@ export const UPLOAD_ALLOWED_ROLES = new Set<CompanyRole>([
   'LEGAL_HEAD',
 ]);
 
-export const ACCESS_ACTIONS: ActivityAction[] = ['VIEW', 'DOWNLOAD', 'CREATE_DOC', 'EDIT_DOC', 'CREATE_FOLDER'];
+export const ACCESS_ACTIONS: ActivityAction[] = [
+  'VIEW',
+  'DOWNLOAD',
+  'CREATE_DOC',
+  'EDIT_DOC',
+  'MOVE_DOC',
+  'DELETE_DOC',
+  'CREATE_FOLDER',
+  'MOVE_FOLDER',
+  'DELETE_FOLDER',
+];
 
 export const roleLabels: Record<CompanyRole, string> = {
   FRONTEND_DEVELOPER: 'Frontend Developer',

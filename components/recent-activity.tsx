@@ -1,11 +1,11 @@
 'use client';
 
-import { Download, Eye, FilePlus, FolderPlus, Pencil } from 'lucide-react';
+import { Download, Eye, FileInput, FilePlus, FolderInput, FolderPlus, Pencil, Trash2 } from 'lucide-react';
 import { useActivity } from '@/hooks/use-dms';
 import { formatDateTime } from '@/lib/formatters';
 import { Loader } from '@/components/ui/loader';
 
-export function RecentActivity({ take = 8 }: { take?: number }) {
+export function RecentActivity({ take = 15 }: { take?: number }) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useActivity(take);
 
   if (isLoading) {
@@ -24,7 +24,7 @@ export function RecentActivity({ take = 8 }: { take?: number }) {
         {activity.map((item) => {
           let Icon = Eye;
           let actionText = 'viewed';
-          let targetName = item.document?.title || item.folder?.name || 'unknown item';
+          let targetName = item.targetName || item.document?.title || item.folder?.name || 'unknown item';
 
           if (item.action === 'DOWNLOAD') {
             Icon = Download;
@@ -35,9 +35,21 @@ export function RecentActivity({ take = 8 }: { take?: number }) {
           } else if (item.action === 'EDIT_DOC') {
             Icon = Pencil;
             actionText = 'edited';
+          } else if (item.action === 'MOVE_DOC') {
+            Icon = FileInput;
+            actionText = 'moved';
+          } else if (item.action === 'DELETE_DOC') {
+            Icon = Trash2;
+            actionText = 'deleted';
           } else if (item.action === 'CREATE_FOLDER') {
             Icon = FolderPlus;
             actionText = 'created folder';
+          } else if (item.action === 'MOVE_FOLDER') {
+            Icon = FolderInput;
+            actionText = 'moved folder';
+          } else if (item.action === 'DELETE_FOLDER') {
+            Icon = Trash2;
+            actionText = 'deleted folder';
           }
 
           return (

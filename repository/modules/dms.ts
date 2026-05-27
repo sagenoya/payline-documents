@@ -75,6 +75,13 @@ export class DmsModule extends FetchFactory {
     return this.call('DELETE', API_URLS.dms.folder(folderId));
   }
 
+  updateFolder(
+    folderId: string,
+    data: { parentId?: string | null },
+  ): Promise<ApiResponse<FolderSummary>> {
+    return this.call('PATCH', API_URLS.dms.folder(folderId), { body: data });
+  }
+
   logDocumentAccess(
     documentId: string,
     action: 'VIEW' | 'DOWNLOAD',
