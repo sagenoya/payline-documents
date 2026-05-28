@@ -21,9 +21,9 @@ export const COMPANY_ROLES: CompanyRole[] = [
 
 export const UPLOAD_ALLOWED_ROLES = new Set<CompanyRole>([
   'FRONTEND_DEVELOPER',
-  'BACKEND_DEVELOPER',
   'PRODUCT',
   'LEGAL_HEAD',
+  'COMPLIANCE'
 ]);
 
 export const ACCESS_ACTIONS: ActivityAction[] = [
