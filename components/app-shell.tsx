@@ -4,9 +4,9 @@ import type * as React from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
-import { Activity, FileSearch, Files, FolderOpen, LayoutDashboard, Plus } from 'lucide-react';
+import { Activity, Files, FolderOpen, LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UserMenu } from '@/components/user-menu';
 import { useProfile } from '@/hooks/use-dms';
 import { cn } from '@/lib/utils';
 import { useDmsStore } from '@/store/dms-store';
@@ -85,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Upload
               </Button>
             )}
-            <UserButton afterSignOutUrl="/sign-in" />
+            <UserMenu profile={profile} />
           </div>
         </header>
 

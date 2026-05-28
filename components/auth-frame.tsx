@@ -4,68 +4,66 @@ import { FileText, LockKeyhole } from 'lucide-react';
 export function AuthFrame({
   children,
   eyebrow,
+  title,
+  description,
 }: {
   children: React.ReactNode;
   eyebrow: string;
+  title: string;
+  description: string;
 }) {
   return (
-    <main className="grid min-h-screen lg:grid-cols-[minmax(520px,1.1fr)_minmax(420px,0.9fr)]">
-      {/* Details Section (Left) */}
-      <section className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-10 py-12 text-white lg:flex">
-        {/* Decorative background elements */}
-        <div className="absolute -left-20 -top-20 size-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 size-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-3xl" />
-
+    <main className="grid min-h-screen bg-background lg:grid-cols-[minmax(520px,1.05fr)_minmax(420px,0.95fr)]">
+      <section className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-zinc-950 px-10 py-12 text-white lg:flex">
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-md shadow-sm border border-white/10">
+            <div className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/10 text-white shadow-sm">
               <FileText className="size-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Payline Docs</span>
+            <span className="text-xl font-semibold tracking-tight">Payline Docs</span>
           </div>
-          <div className="flex h-9 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-sm font-medium backdrop-blur-md">
+          <div className="flex h-9 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 text-sm font-medium">
             <LockKeyhole className="size-4" />
             Private Workspace
           </div>
         </div>
 
-        <div className="relative z-10 max-w-xl">
-          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white">
-            Secure, organized, and accessible.
+        <div className="relative z-10 max-w-2xl">
+          <h2 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            Your company documents, organized.
           </h2>
-          <p className="mt-6 text-lg text-indigo-100 leading-relaxed">
-            Built exclusively for our internal team. Access the latest HR policies, financial records, engineering docs, and more in one centralized hub.
+          <p className="mt-5 max-w-xl text-base leading-7 text-zinc-300">
+            Browse files by folder, find policies fast, and keep a clear activity trail for uploads, previews, downloads, delete or move files and folders.
           </p>
+
+        
         </div>
 
         <div className="relative z-10 flex items-center justify-between">
-          <p className="text-sm font-medium text-indigo-200">
+          <p className="text-sm font-medium text-zinc-300">
             Internal Document Management System
           </p>
-          <p className="text-sm font-medium text-indigo-200/60">
+          <p className="text-sm font-medium text-zinc-500">
             Protected internal data
           </p>
         </div>
       </section>
 
-      {/* Form Section (Right) */}
-      <section className="flex min-h-screen items-center justify-center bg-background px-4 py-10 sm:px-8 relative shadow-[-20px_0_40px_-10px_rgba(0,0,0,0.05)] z-10">
+      <section className="relative z-10 flex min-h-screen items-center justify-center bg-background px-4 py-10 shadow-[-20px_0_40px_-10px_rgba(0,0,0,0.05)] sm:px-8">
         <div className="w-full max-w-md">
           <div className="mb-10">
             <div className="mb-6 flex items-center gap-3 lg:hidden">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                 <FileText className="size-5" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">Payline Docs</span>
+              <span className="text-xl font-semibold tracking-tight text-foreground">Payline Docs</span>
             </div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">{eyebrow}</p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{eyebrow}</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
           </div>
 
-          <div className="[&_.cl-card]:border [&_.cl-card]:border-border [&_.cl-card]:shadow-sm [&_.cl-card]:rounded-xl [&_.cl-footerActionLink]:text-primary [&_.cl-formButtonPrimary]:bg-primary [&_.cl-formButtonPrimary]:text-primary-foreground [&_.cl-formButtonPrimary]:shadow-sm [&_.cl-formButtonPrimary]:hover:bg-primary/90 [&_.cl-headerTitle]:hidden [&_.cl-headerSubtitle]:hidden [&_.cl-rootBox]:w-full [&_.cl-socialButtonsBlockButton]:border-border">
-            {children}
-          </div>
+          {children}
         </div>
       </section>
     </main>
