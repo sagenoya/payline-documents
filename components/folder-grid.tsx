@@ -34,7 +34,7 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {folders.map((folder) => (
           <div
             key={folder.id}
@@ -45,7 +45,7 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
                 <Folder className="size-5" />
               </div>
               <div className="min-w-0">
-                <p className="truncate font-medium text-foreground">{folder.name}</p>
+                <p className="truncate uppercase font-bold text-foreground">{folder.name}</p>
                 {folder._count && (
                   <small>
                     {folder._count.documents} docs · {folder._count.children} folders
