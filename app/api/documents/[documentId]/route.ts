@@ -12,8 +12,8 @@ export async function GET(
   await requireClerkUser();
   const { documentId } = await params;
 
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
+  const document = await prisma.document.findFirst({
+    where: { id: documentId, deletedAt: null },
     include: {
       uploadedBy: { select: { id: true, name: true, email: true, imageUrl: true } },
       folder: { select: { id: true, name: true } },
@@ -50,8 +50,8 @@ export async function PATCH(
   const user = await requireClerkUser();
   const { documentId } = await params;
 
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
+  const document = await prisma.document.findFirst({
+    where: { id: documentId, deletedAt: null },
     select: { id: true, title: true, folderId: true, uploadedById: true },
   });
 
@@ -100,8 +100,8 @@ export async function DELETE(
   const user = await requireClerkUser();
   const { documentId } = await params;
 
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
+  const document = await prisma.document.findFirst({
+    where: { id: documentId, deletedAt: null },
     select: { id: true, title: true, uploadedById: true },
   });
 
@@ -128,8 +128,12 @@ export async function DELETE(
         targetType: 'DOCUMENT',
       },
     }),
-    prisma.document.delete({
+    prisma.document.update({
       where: { id: documentId },
+      data: {
+        deletedAt: new Date(),
+        deletedById: user.id,
+      },
     }),
   ]);
 

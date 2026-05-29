@@ -1,9 +1,11 @@
 import type { DocumentCategory } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { canUpload } from '@/lib/dms';
 import { documentCreateSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
+import { withDbTimeout } from '@/server/db';
 
 export async function GET(request: Request) {
   try {
@@ -13,14 +15,28 @@ export async function GET(request: Request) {
     const search = searchParams.get('search')?.trim();
     const category = searchParams.get('category') as DocumentCategory | null;
     const folderId = searchParams.get('folderId');
+    const uploadedById = searchParams.get('uploadedById');
     const recent = searchParams.get('recent') === 'true';
     const page = Math.max(1, Number(searchParams.get('page') || 1));
-    const limit = Math.max(1, Number(searchParams.get('take') || 15));
+    const limit = Math.min(50, Math.max(1, Number(searchParams.get('take') || 15)));
+    const sortBy = searchParams.get('sortBy') || (recent ? 'createdAt' : 'updatedAt');
+    const sortDirection = searchParams.get('sortDirection') === 'asc' ? 'asc' : 'desc';
     const skip = (page - 1) * limit;
 
-    const where = {
+    const orderBy: Prisma.DocumentOrderByWithRelationInput =
+      sortBy === 'title'
+        ? { title: sortDirection }
+        : sortBy === 'size'
+          ? { size: sortDirection }
+          : sortBy === 'createdAt'
+            ? { createdAt: sortDirection }
+            : { updatedAt: sortDirection };
+
+    const where: Prisma.DocumentWhereInput = {
+      deletedAt: null,
       ...(category ? { category } : {}),
       ...(folderId ? { folderId } : {}),
+      ...(uploadedById ? { uploadedById } : {}),
       ...(search
         ? {
             OR: [
@@ -32,19 +48,21 @@ export async function GET(request: Request) {
         : {}),
     };
 
-    const [total, documents] = await prisma.$transaction([
-      prisma.document.count({ where }),
-      prisma.document.findMany({
-        where,
-        include: {
-          uploadedBy: { select: { id: true, name: true, email: true, imageUrl: true } },
-          folder: { select: { id: true, name: true } },
-        },
-        orderBy: recent ? { createdAt: 'desc' } : { updatedAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+    const [total, documents] = await withDbTimeout(
+      prisma.$transaction([
+        prisma.document.count({ where }),
+        prisma.document.findMany({
+          where,
+          include: {
+            uploadedBy: { select: { id: true, name: true, email: true, imageUrl: true } },
+            folder: { select: { id: true, name: true } },
+          },
+          orderBy,
+          skip,
+          take: limit,
+        }),
+      ]),
+    );
 
     const totalPages = Math.ceil(total / limit);
 
@@ -79,19 +97,21 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid document', 422);
   }
 
-  const document = await prisma.document.create({
-    data: {
-      ...parsed.data,
-      description: parsed.data.description || null,
-      folderId: parsed.data.folderId || null,
-      category: parsed.data.category as DocumentCategory,
-      uploadedById: user.id,
-    },
-    include: {
-      uploadedBy: { select: { id: true, name: true, email: true, imageUrl: true } },
-      folder: { select: { id: true, name: true } },
-    },
-  });
+  const document = await withDbTimeout(
+    prisma.document.create({
+      data: {
+        ...parsed.data,
+        description: parsed.data.description || null,
+        folderId: parsed.data.folderId || null,
+        category: parsed.data.category as DocumentCategory,
+        uploadedById: user.id,
+      },
+      include: {
+        uploadedBy: { select: { id: true, name: true, email: true, imageUrl: true } },
+        folder: { select: { id: true, name: true } },
+      },
+    }),
+  );
 
   await logActivity({
     userId: user.id,

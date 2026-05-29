@@ -1,5 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
+import { withDbTimeout } from '@/server/db';
+
+const activityFilters = {
+  views: ['VIEW'],
+  downloads: ['DOWNLOAD'],
+  uploads: ['CREATE_DOC', 'CREATE_FOLDER'],
+  deletes: ['DELETE_DOC', 'DELETE_FOLDER'],
+} as const;
 
 export async function GET(request: Request) {
   try {
@@ -7,35 +15,42 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get('page') || 1));
-    const limit = Math.max(1, Number(searchParams.get('take') || 15));
+    const limit = Math.min(50, Math.max(1, Number(searchParams.get('take') || 15)));
+    const filter = searchParams.get('filter') as keyof typeof activityFilters | null;
     const skip = (page - 1) * limit;
+    const where = filter && activityFilters[filter]
+      ? { action: { in: [...activityFilters[filter]] } }
+      : {};
 
-    const [total, logs] = await prisma.$transaction([
-      prisma.activityLog.count(),
-      prisma.activityLog.findMany({
-        include: {
-          user: { select: { id: true, name: true, email: true, imageUrl: true } },
-          document: {
-            select: {
-              id: true,
-              title: true,
-              category: true,
-              fileUrl: true,
-              mimeType: true,
+    const [total, logs] = await withDbTimeout(
+      prisma.$transaction([
+        prisma.activityLog.count({ where }),
+        prisma.activityLog.findMany({
+          where,
+          include: {
+            user: { select: { id: true, name: true, email: true, imageUrl: true } },
+            document: {
+              select: {
+                id: true,
+                title: true,
+                category: true,
+                fileUrl: true,
+                mimeType: true,
+              },
+            },
+            folder: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
-          folder: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: { timestamp: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+          orderBy: { timestamp: 'desc' },
+          skip,
+          take: limit,
+        }),
+      ]),
+    );
 
     const totalPages = Math.ceil(total / limit);
 

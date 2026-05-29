@@ -17,10 +17,13 @@ export const API_URLS = {
   },
   dms: {
     profile: '/api/profile',
+    dashboard: '/api/dashboard',
+    users: '/api/users',
     folders: '/api/folders',
     folder: (folderId: string) => `/api/folders/${folderId}`,
     documents: '/api/documents',
     document: (documentId: string) => `/api/documents/${documentId}`,
+    documentRestore: (documentId: string) => `/api/documents/${documentId}/restore`,
     documentAccess: (documentId: string) => `/api/documents/${documentId}/access`,
     activity: '/api/activity',
     uploadthing: '/api/uploadthing',

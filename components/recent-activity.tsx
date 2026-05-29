@@ -1,25 +1,60 @@
 'use client';
 
+import * as React from 'react';
 import { Download, Eye, FileInput, FilePlus, FolderInput, FolderPlus, Pencil, Trash2 } from 'lucide-react';
-import { useActivity } from '@/hooks/use-dms';
+import { PaginationControls } from '@/components/pagination-controls';
+import { useActivityPage } from '@/hooks/use-dms';
 import { formatDateTime } from '@/lib/formatters';
 import { Loader } from '@/components/ui/loader';
+import type { ActivityFilter } from '@/types/dms';
 
-export function RecentActivity({ take = 15 }: { take?: number }) {
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useActivity(take);
+const activityFilterLabels: Array<{ value: ActivityFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'views', label: 'Views' },
+  { value: 'downloads', label: 'Downloads' },
+  { value: 'uploads', label: 'Uploads' },
+  { value: 'deletes', label: 'Deletes' },
+];
+
+export function RecentActivity({
+  take = 15,
+  showFilters = false,
+}: {
+  take?: number;
+  showFilters?: boolean;
+}) {
+  const [page, setPage] = React.useState(1);
+  const [filter, setFilter] = React.useState<ActivityFilter>('all');
+  const { data, isLoading, isFetching } = useActivityPage(take, page, filter);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   if (isLoading) {
     return <Loader text="Loading activity..." />;
   }
 
-  const activity = data?.pages.flatMap((p) => p.data) || [];
+  const activity = data?.data || [];
 
   if (!activity.length) {
-    return <p>No document activity yet.</p>;
+    return (
+      <div className="space-y-3">
+        {showFilters && (
+          <ActivityFilterControl value={filter} onChange={setFilter} />
+        )}
+        <div className="rounded-lg border border-dashed bg-background p-8 text-center">
+          <p>{filter === 'all' ? 'No document activity yet.' : 'No activity matches this filter.'}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
+      {showFilters && (
+        <ActivityFilterControl value={filter} onChange={setFilter} />
+      )}
       <div className="divide-y rounded-lg border bg-background">
         {activity.map((item) => {
           let Icon = Eye;
@@ -69,16 +104,35 @@ export function RecentActivity({ take = 15 }: { take?: number }) {
           );
         })}
       </div>
-      
-      {hasNextPage && (
+      {data && <PaginationControls meta={data.meta} onPageChange={setPage} />}
+      {isFetching && <p className="text-sm text-muted-foreground">Refreshing activity...</p>}
+    </div>
+  );
+}
+
+function ActivityFilterControl({
+  value,
+  onChange,
+}: {
+  value: ActivityFilter;
+  onChange: (value: ActivityFilter) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {activityFilterLabels.map((item) => (
         <button
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="w-full rounded-md border bg-muted/50 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+          key={item.value}
+          type="button"
+          onClick={() => onChange(item.value)}
+          className={`rounded-md border px-3 py-1.5 text-sm transition ${
+            value === item.value
+              ? 'border-primary bg-brand-subtle text-primary'
+              : 'bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
         >
-          {isFetchingNextPage ? 'Loading more...' : 'Load more'}
+          {item.label}
         </button>
-      )}
+      ))}
     </div>
   );
 }

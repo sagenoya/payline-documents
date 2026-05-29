@@ -91,13 +91,20 @@ model Document {
   folder         Folder?             @relation(fields: [folderId], references: [id], onDelete: SetNull)
   activityLogs   ActivityLog[]
   lastAccessedAt DateTime?
+  deletedAt      DateTime?
+  deletedById    String?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
   @@index([category])
   @@index([folderId])
+  @@index([updatedAt])
   @@index([uploadedById])
   @@index([createdAt])
+  @@index([deletedAt])
+  @@index([folderId, updatedAt])
+  @@index([category, updatedAt])
+  @@index([uploadedById, updatedAt])
 }
 
 model ActivityLog {
@@ -117,4 +124,6 @@ model ActivityLog {
   @@index([documentId])
   @@index([folderId])
   @@index([timestamp])
+  @@index([timestamp, action])
+  @@index([action, timestamp])
 }

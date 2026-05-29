@@ -2,20 +2,44 @@
 
 import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { $api } from '@/repository';
-import type { CreateDocumentInput, CreateFolderInput, UpdateFolderInput } from '@/types/dms';
+import type {
+  ActivityFilter,
+  CreateDocumentInput,
+  CreateFolderInput,
+  DocumentSortBy,
+  SortDirection,
+  UpdateFolderInput,
+} from '@/types/dms';
 
 export const dmsKeys = {
   profile: ['dms', 'profile'] as const,
+  dashboard: ['dms', 'dashboard'] as const,
+  users: ['dms', 'users'] as const,
   folders: (parentId?: string | null) => ['dms', 'folders', parentId ?? 'root'] as const,
   folder: (folderId: string) => ['dms', 'folder', folderId] as const,
   documents: (query?: Record<string, unknown>) => ['dms', 'documents', query ?? {}] as const,
   activity: ['dms', 'activity'] as const,
 };
 
+export function useDashboard() {
+  return useQuery({
+    queryKey: dmsKeys.dashboard,
+    queryFn: async () => (await $api.dms.getDashboard()).data,
+  });
+}
+
 export function useProfile() {
   return useQuery({
     queryKey: dmsKeys.profile,
     queryFn: async () => (await $api.dms.getProfile()).data,
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: dmsKeys.users,
+    queryFn: async () => (await $api.dms.getUsers()).data,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -35,6 +59,15 @@ export function useFolders(parentId?: string | null, options?: { enabled?: boole
     queryFn: async ({ pageParam }) => (await $api.dms.getFolders(parentId, pageParam)).data,
     getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined),
     enabled: options?.enabled ?? true,
+  });
+}
+
+export function useFoldersPage(parentId?: string | null, page = 1, take = 15, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...dmsKeys.folders(parentId), page, take],
+    queryFn: async () => (await $api.dms.getFolders(parentId, page, take)).data,
+    enabled: options?.enabled ?? true,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -70,8 +103,11 @@ export function useDocuments(query?: {
   search?: string;
   category?: string;
   folderId?: string;
+  uploadedById?: string;
   recent?: boolean;
   take?: number;
+  sortBy?: DocumentSortBy;
+  sortDirection?: SortDirection;
 }, options?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: dmsKeys.documents(query),
@@ -79,6 +115,25 @@ export function useDocuments(query?: {
     queryFn: async ({ pageParam }) => (await $api.dms.getDocuments({ ...query, page: pageParam })).data,
     getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined),
     enabled: options?.enabled ?? true,
+  });
+}
+
+export function useDocumentsPage(query?: {
+  search?: string;
+  category?: string;
+  folderId?: string;
+  uploadedById?: string;
+  recent?: boolean;
+  take?: number;
+  page?: number;
+  sortBy?: DocumentSortBy;
+  sortDirection?: SortDirection;
+}, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: dmsKeys.documents(query),
+    queryFn: async () => (await $api.dms.getDocuments(query)).data,
+    enabled: options?.enabled ?? true,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -92,6 +147,7 @@ export function useCreateDocument() {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
     },
   });
 }
@@ -107,6 +163,7 @@ export function useUpdateDocument() {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
     },
   });
 }
@@ -116,11 +173,69 @@ export function useDeleteDocument() {
 
   return useMutation({
     mutationFn: (documentId: string) => $api.dms.deleteDocument(documentId),
+    onMutate: async (documentId) => {
+      await queryClient.cancelQueries({ queryKey: ['dms', 'documents'] });
+      const previousDocuments = queryClient.getQueriesData({ queryKey: ['dms', 'documents'] });
+
+      queryClient.setQueriesData({ queryKey: ['dms', 'documents'] }, (oldData: any) => {
+        if (!oldData) return oldData;
+
+        if (Array.isArray(oldData.pages)) {
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: page.data.filter((document: any) => document.id !== documentId),
+              meta: {
+                ...page.meta,
+                total: Math.max(0, page.meta.total - 1),
+              },
+            })),
+          };
+        }
+
+        if (Array.isArray(oldData.data)) {
+          return {
+            ...oldData,
+            data: oldData.data.filter((document: any) => document.id !== documentId),
+            meta: {
+              ...oldData.meta,
+              total: Math.max(0, oldData.meta.total - 1),
+            },
+          };
+        }
+
+        return oldData;
+      });
+
+      return { previousDocuments };
+    },
+    onError: (_error, _documentId, context) => {
+      context?.previousDocuments.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
+    },
+  });
+}
+
+export function useRestoreDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (documentId: string) => $api.dms.restoreDocument(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
     },
   });
 }
@@ -134,6 +249,7 @@ export function useDeleteFolder() {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
     },
   });
 }
@@ -168,5 +284,13 @@ export function useActivity(take = 15) {
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => (await $api.dms.getActivity(take, pageParam)).data,
     getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined),
+  });
+}
+
+export function useActivityPage(take = 15, page = 1, filter: ActivityFilter = 'all') {
+  return useQuery({
+    queryKey: [...dmsKeys.activity, take, page, filter],
+    queryFn: async () => (await $api.dms.getActivity(take, page, filter)).data,
+    placeholderData: (previousData) => previousData,
   });
 }

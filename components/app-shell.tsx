@@ -1,9 +1,9 @@
 'use client';
 
-import type * as React from 'react';
+import * as React from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Activity, Files, FolderOpen, LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
@@ -30,10 +30,17 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data: profile } = useProfile();
+  const router = useRouter();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const setUploadModalOpen = useDmsStore((state) => state.setUploadModalOpen);
   const uploadModalOpen = useDmsStore((state) => state.uploadModalOpen);
   const editingDocument = useDmsStore((state) => state.editingDocument);
+
+  React.useEffect(() => {
+    if (!profileLoading && profile && !profile.onboarded) {
+      router.replace('/onboarding');
+    }
+  }, [profile, profileLoading, router]);
 
   return (
     <div className="min-h-screen bg-muted/30">

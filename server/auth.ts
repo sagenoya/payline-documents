@@ -1,17 +1,21 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
+import { withDbTimeout } from '@/server/db';
 
-export async function requireClerkUser() {
+export const requireClerkUser = cache(async function requireClerkUser() {
   const { userId, sessionClaims } = await auth();
 
   if (!userId) {
     throw new Response('Unauthorized', { status: 401 });
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { clerkUserId: userId },
-    include: { profile: true },
-  });
+  const existingUser = await withDbTimeout(
+    prisma.user.findUnique({
+      where: { clerkUserId: userId },
+      include: { profile: true },
+    }),
+  );
 
   if (existingUser) {
     return existingUser;
@@ -52,21 +56,25 @@ export async function requireClerkUser() {
 
   let user;
   try {
-    user = await prisma.user.create({
-      data: {
-        clerkUserId: userId,
-        email,
-        name: resolvedName,
-        imageUrl,
-      },
-      include: { profile: true },
-    });
+    user = await withDbTimeout(
+      prisma.user.create({
+        data: {
+          clerkUserId: userId,
+          email,
+          name: resolvedName,
+          imageUrl,
+        },
+        include: { profile: true },
+      }),
+    );
   } catch (error: any) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      user = await prisma.user.findUnique({
-        where: { clerkUserId: userId },
-        include: { profile: true },
-      });
+      user = await withDbTimeout(
+        prisma.user.findUnique({
+          where: { clerkUserId: userId },
+          include: { profile: true },
+        }),
+      );
     } else {
       throw error;
     }
@@ -77,7 +85,7 @@ export async function requireClerkUser() {
   }
 
   return user;
-}
+});
 
 export function jsonOk<T>(data: T, init?: ResponseInit) {
   return Response.json({ success: true, data }, init);

@@ -1,16 +1,20 @@
 'use client';
 
+import * as React from 'react';
 import { DocumentList } from '@/components/document-list';
+import { PaginationControls } from '@/components/pagination-controls';
 import { Loader } from '@/components/ui/loader';
-import { useDocuments } from '@/hooks/use-dms';
+import { useDocumentsPage } from '@/hooks/use-dms';
 
 export function DashboardRecentUploads() {
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useDocuments({
+  const [page, setPage] = React.useState(1);
+  const { data, isLoading } = useDocumentsPage({
     recent: true,
     take: 15,
+    page,
+    sortBy: 'createdAt',
+    sortDirection: 'desc',
   });
-
-  const documents = data?.pages.flatMap((page) => page.data) || [];
 
   if (isLoading) {
     return <Loader text="Loading recent uploads..." />;
@@ -18,16 +22,8 @@ export function DashboardRecentUploads() {
 
   return (
     <div className="space-y-4">
-      <DocumentList documents={documents} emptyText="No documents have been uploaded yet." />
-      {hasNextPage && (
-        <button
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="w-full rounded-md border bg-muted/50 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
-        >
-          {isFetchingNextPage ? 'Loading more...' : 'Load more'}
-        </button>
-      )}
+      <DocumentList documents={data?.data || []} emptyText="No documents have been uploaded yet." />
+      {data && <PaginationControls meta={data.meta} onPageChange={setPage} />}
     </div>
   );
 }

@@ -5,16 +5,29 @@ import type {
   CreateFolderInput,
   CurrentProfile,
   ActivityLogType,
+  ActivityFilter,
+  DashboardData,
   DocumentSummary,
+  DocumentSortBy,
   FolderDetail,
   FolderSummary,
   Paginated,
+  SortDirection,
+  UserOption,
 } from '@/types/dms';
 import { FetchFactory } from '../factory';
 
 export class DmsModule extends FetchFactory {
   getProfile(): Promise<ApiResponse<CurrentProfile>> {
     return this.call('GET', API_URLS.dms.profile);
+  }
+
+  getDashboard(): Promise<ApiResponse<DashboardData>> {
+    return this.call('GET', API_URLS.dms.dashboard);
+  }
+
+  getUsers(): Promise<ApiResponse<UserOption[]>> {
+    return this.call('GET', API_URLS.dms.users);
   }
 
   updateProfile(companyRole: string): Promise<ApiResponse<CurrentProfile>> {
@@ -45,9 +58,12 @@ export class DmsModule extends FetchFactory {
     search?: string;
     category?: string;
     folderId?: string;
+    uploadedById?: string;
     recent?: boolean;
     take?: number;
     page?: number;
+    sortBy?: DocumentSortBy;
+    sortDirection?: SortDirection;
   }): Promise<ApiResponse<Paginated<DocumentSummary>>> {
     return this.call('GET', API_URLS.dms.documents, { query });
   }
@@ -71,6 +87,10 @@ export class DmsModule extends FetchFactory {
     return this.call('DELETE', API_URLS.dms.document(documentId));
   }
 
+  restoreDocument(documentId: string): Promise<ApiResponse<DocumentSummary>> {
+    return this.call('POST', API_URLS.dms.documentRestore(documentId));
+  }
+
   deleteFolder(folderId: string): Promise<ApiResponse<{ id: string }>> {
     return this.call('DELETE', API_URLS.dms.folder(folderId));
   }
@@ -91,7 +111,7 @@ export class DmsModule extends FetchFactory {
     });
   }
 
-  getActivity(take = 15, page = 1): Promise<ApiResponse<Paginated<ActivityLogType>>> {
-    return this.call('GET', API_URLS.dms.activity, { query: { take, page } });
+  getActivity(take = 15, page = 1, filter: ActivityFilter = 'all'): Promise<ApiResponse<Paginated<ActivityLogType>>> {
+    return this.call('GET', API_URLS.dms.activity, { query: { take, page, filter } });
   }
 }

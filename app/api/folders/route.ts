@@ -3,6 +3,7 @@ import { folderCreateSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
 import { getRecursiveFolderCounts } from '@/lib/folder-utils';
+import { withDbTimeout } from '@/server/db';
 
 export async function GET(request: Request) {
   try {
@@ -16,24 +17,28 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
 
     if (all) {
-      const folders = await prisma.folder.findMany({
-        select: { id: true, name: true, parentId: true },
-        orderBy: { name: 'asc' },
-      });
+      const folders = await withDbTimeout(
+        prisma.folder.findMany({
+          select: { id: true, name: true, parentId: true },
+          orderBy: { name: 'asc' },
+        }),
+      );
       return jsonOk(folders);
     }
 
     const where = { parentId: parentId || null };
 
-    const [total, rawFolders] = await prisma.$transaction([
-      prisma.folder.count({ where }),
-      prisma.folder.findMany({
-        where,
-        orderBy: { name: 'asc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+    const [total, rawFolders] = await withDbTimeout(
+      prisma.$transaction([
+        prisma.folder.count({ where }),
+        prisma.folder.findMany({
+          where,
+          orderBy: { name: 'asc' },
+          skip,
+          take: limit,
+        }),
+      ]),
+    );
 
     const recursiveCounts = await getRecursiveFolderCounts(rawFolders.map(f => f.id));
     const folders = rawFolders.map(f => {
@@ -78,12 +83,14 @@ export async function POST(request: Request) {
 
   let folder;
   try {
-    folder = await prisma.folder.create({
-      data: {
-        name: parsed.data.name.trim(),
-        parentId: parsed.data.parentId || null,
-      },
-    });
+    folder = await withDbTimeout(
+      prisma.folder.create({
+        data: {
+          name: parsed.data.name.trim(),
+          parentId: parsed.data.parentId || null,
+        },
+      }),
+    );
   } catch {
     return jsonError('A folder with this name already exists here.', 409);
   }

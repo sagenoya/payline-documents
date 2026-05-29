@@ -9,6 +9,8 @@ export type BasicUser = {
   imageUrl?: string | null;
 };
 
+export type UserOption = Pick<BasicUser, 'id' | 'name' | 'email' | 'imageUrl'>;
+
 export type Profile = {
   id: string;
   userId: string;
@@ -21,6 +23,7 @@ export type Profile = {
 export type CurrentProfile = BasicUser & {
   profile?: Profile | null;
   canUpload: boolean;
+  onboarded: boolean;
 };
 
 export type FolderSummary = {
@@ -102,4 +105,18 @@ export type Paginated<T> = {
     totalPages: number;
     hasMore: boolean;
   };
+};
+
+export type DocumentSortBy = 'title' | 'createdAt' | 'updatedAt' | 'size';
+
+export type SortDirection = 'asc' | 'desc';
+
+export type ActivityFilter = 'all' | 'views' | 'downloads' | 'uploads' | 'deletes';
+
+export type DashboardData = {
+  documentCount: number;
+  folderCount: number;
+  userCount: number;
+  canUpload: boolean;
+  isUnavailable: boolean;
 };

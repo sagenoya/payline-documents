@@ -3,14 +3,21 @@ import { prisma } from '@/lib/prisma';
 import { canUpload } from '@/lib/dms';
 import { onboardingSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
+import { withDbTimeout } from '@/server/db';
 
 export async function GET() {
-  const user = await requireClerkUser();
+  try {
+    const user = await requireClerkUser();
 
-  return jsonOk({
-    ...user,
-    canUpload: canUpload(user.profile?.companyRole),
-  });
+    return jsonOk({
+      ...user,
+      canUpload: canUpload(user.profile?.companyRole),
+    });
+  } catch (error) {
+    console.error('Profile lookup failed', error);
+    if (error instanceof Response) return error;
+    return jsonError('Profile is temporarily unavailable. Please try again.', 503);
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -23,20 +30,22 @@ export async function PATCH(request: Request) {
       return jsonError(parsed.error.issues[0]?.message ?? 'Invalid role', 422);
     }
 
-    const [profile] = await prisma.$transaction([
-      prisma.profile.upsert({
-        where: { userId: user.id },
-        update: { companyRole: parsed.data.companyRole as CompanyRole },
-        create: {
-          userId: user.id,
-          companyRole: parsed.data.companyRole as CompanyRole,
-        },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: { onboarded: true },
-      }),
-    ]);
+    const [profile] = await withDbTimeout(
+      prisma.$transaction([
+        prisma.profile.upsert({
+          where: { userId: user.id },
+          update: { companyRole: parsed.data.companyRole as CompanyRole },
+          create: {
+            userId: user.id,
+            companyRole: parsed.data.companyRole as CompanyRole,
+          },
+        }),
+        prisma.user.update({
+          where: { id: user.id },
+          data: { onboarded: true },
+        }),
+      ]),
+    );
 
     return jsonOk({
       profile,

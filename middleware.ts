@@ -12,6 +12,8 @@ const isProtectedRoute = createRouteMatcher([
   '/api/folders(.*)',
   '/api/profile(.*)',
   '/api/activity(.*)',
+  '/api/dashboard(.*)',
+  '/api/users(.*)',
   // NOTE: /api/uploadthing is NOT protected here because UploadThing's
   // server sends a callback POST with no Clerk session. Auth is handled
   // inside the UploadThing middleware function in core.ts instead.

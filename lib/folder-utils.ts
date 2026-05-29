@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 
 /**
@@ -6,47 +7,47 @@ import { prisma } from './prisma';
  * and compute recursive counts in memory.
  */
 export async function getRecursiveFolderCounts(folderIds: string[]) {
-  const allFolders = await prisma.folder.findMany({
-    select: {
-      id: true,
-      parentId: true,
-      _count: {
-        select: { documents: true },
-      },
-    },
-  });
-
-  const childrenMap = new Map<string, string[]>();
-  const folderMap = new Map<string, typeof allFolders[0]>();
-
-  for (const f of allFolders) {
-    folderMap.set(f.id, f);
-    if (f.parentId) {
-      if (!childrenMap.has(f.parentId)) childrenMap.set(f.parentId, []);
-      childrenMap.get(f.parentId)!.push(f.id);
-    }
-  }
-
-  function compute(id: string): { docs: number; folders: number } {
-    const f = folderMap.get(id);
-    let docs = f?._count.documents || 0;
-    let folders = 0;
-
-    const children = childrenMap.get(id) || [];
-    folders += children.length;
-
-    for (const childId of children) {
-      const childCounts = compute(childId);
-      docs += childCounts.docs;
-      folders += childCounts.folders;
-    }
-
-    return { docs, folders };
-  }
-
   const result = new Map<string, { docs: number; folders: number }>();
+  if (!folderIds.length) return result;
+
+  const rows = await prisma.$queryRaw<Array<{ rootId: string; docs: number; folders: number }>>`
+    WITH RECURSIVE folder_tree AS (
+      SELECT
+        f.id,
+        f."parentId",
+        f.id AS "rootId",
+        0 AS depth
+      FROM "Folder" f
+      WHERE f.id IN (${Prisma.join(folderIds)})
+
+      UNION ALL
+
+      SELECT
+        child.id,
+        child."parentId",
+        folder_tree."rootId",
+        folder_tree.depth + 1 AS depth
+      FROM "Folder" child
+      INNER JOIN folder_tree ON child."parentId" = folder_tree.id
+    )
+    SELECT
+      folder_tree."rootId",
+      COALESCE(COUNT(doc.id), 0)::int AS docs,
+      COUNT(*) FILTER (WHERE folder_tree.depth > 0)::int AS folders
+    FROM folder_tree
+    LEFT JOIN "Document" doc ON doc."folderId" = folder_tree.id AND doc."deletedAt" IS NULL
+    GROUP BY folder_tree."rootId"
+  `;
+
   for (const id of folderIds) {
-    result.set(id, compute(id));
+    result.set(id, { docs: 0, folders: 0 });
+  }
+
+  for (const row of rows) {
+    result.set(row.rootId, {
+      docs: Number(row.docs),
+      folders: Number(row.folders),
+    });
   }
 
   return result;

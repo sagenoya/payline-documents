@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { Download, Eye, Pencil, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Copy, Download, Eye, FolderOpen, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
-import { useDeleteDocument, useLogDocumentAccess, useProfile } from '@/hooks/use-dms';
+import { useDeleteDocument, useLogDocumentAccess, useProfile, useRestoreDocument } from '@/hooks/use-dms';
 import { canDeleteDocument } from '@/lib/dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 export function DocumentActions({ document }: { document: DocumentSummary }) {
   const logAccess = useLogDocumentAccess();
   const deleteDocument = useDeleteDocument();
+  const restoreDocument = useRestoreDocument();
   const { data: user } = useProfile();
   const setEditingDocument = useDmsStore((s) => s.setEditingDocument);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -54,10 +56,29 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
     window.open(document.fileUrl, '_blank');
   }
 
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(document.fileUrl);
+      toast.success('File link copied');
+    } catch {
+      toast.error('Unable to copy file link');
+    }
+  }
+
   async function handleDelete() {
     try {
       await deleteDocument.mutateAsync(document.id);
-      toast.success('Document deleted');
+      toast.success('Document deleted', {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            restoreDocument.mutate(document.id, {
+              onSuccess: () => toast.success('Document restored'),
+              onError: () => toast.error('Unable to restore document'),
+            });
+          },
+        },
+      });
       setDeleteOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete document');
@@ -67,11 +88,22 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
   return (
     <>
       <div className="flex items-center justify-end gap-1">
+        {document.folderId && (
+          <Link
+            href={`/folders/${document.folderId}`}
+            aria-label={`Open folder for ${document.title}`}
+            title="Open containing folder"
+            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <FolderOpen className="size-4" />
+          </Link>
+        )}
         {canEdit && (
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label={`Edit ${document.title}`}
+            title="Edit"
             onClick={() => setEditingDocument(document)}
           >
             <Pencil className="size-4" />
@@ -81,6 +113,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
           variant="ghost"
           size="icon-sm"
           aria-label={`Preview ${document.title}`}
+          title="Preview"
           onClick={() => openDocument('VIEW')}
         >
           <Eye className="size-4" />
@@ -88,7 +121,17 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
         <Button
           variant="ghost"
           size="icon-sm"
+          aria-label={`Copy link for ${document.title}`}
+          title="Copy link"
+          onClick={copyLink}
+        >
+          <Copy className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           aria-label={`Download ${document.title}`}
+          title="Download"
           onClick={() => openDocument('DOWNLOAD')}
         >
           <Download className="size-4" />
@@ -98,6 +141,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
             variant="ghost"
             size="icon-sm"
             aria-label={`Delete ${document.title}`}
+            title="Delete"
             onClick={() => setDeleteOpen(true)}
             disabled={deleteDocument.isPending}
           >

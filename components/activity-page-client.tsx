@@ -9,7 +9,7 @@ export function ActivityPageClient() {
         <h1>Recent Activity</h1>
         <p className="mt-1">Track who viewed or downloaded company documents.</p>
       </div>
-      <RecentActivity take={15} />
+      <RecentActivity take={15} showFilters />
     </div>
   );
 }

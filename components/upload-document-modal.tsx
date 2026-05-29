@@ -30,6 +30,7 @@ export function UploadDocumentModal() {
   const createFolder = useCreateFolder(activeFolderId);
 
   const [uploadedFile, setUploadedFile] = React.useState<UploadedFile | null>(null);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
   
   // Folder creation state
   const [creatingParentId, setCreatingParentId] = React.useState<string | null | undefined>(undefined);
@@ -60,16 +61,22 @@ export function UploadDocumentModal() {
         size: file.size,
         type: file.type || 'application/octet-stream',
       });
+      setUploadProgress(100);
       setForm((current) => ({ ...current, title: current.title || file.name }));
       toast.success('File uploaded successfully');
     },
+    onUploadProgress: (progress) => {
+      setUploadProgress(progress);
+    },
     onUploadError: (error) => {
+      setUploadProgress(0);
       toast.error(`Upload failed: ${error.message}`);
     },
   });
 
   function reset() {
     setUploadedFile(null);
+    setUploadProgress(0);
     setForm({ title: '', description: '', category: 'OPERATIONS', folderId: activeFolderId || '' });
     setFolderName('');
     setCreatingParentId(undefined);
@@ -232,7 +239,7 @@ export function UploadDocumentModal() {
                 {isUploading ? (
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Uploading...
+                    Uploading {Math.max(1, Math.round(uploadProgress))}%
                   </>
                 ) : (
                   'Browse files'
@@ -250,6 +257,14 @@ export function UploadDocumentModal() {
                   />
                 )}
               </Button>
+              {isUploading && (
+                <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${Math.max(4, uploadProgress)}%` }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -85,7 +85,7 @@ export async function DELETE(
     where: { id: folderId },
     include: {
       _count: {
-        select: { children: true, documents: true },
+        select: { children: true },
       },
     },
   });
@@ -94,7 +94,11 @@ export async function DELETE(
     return jsonError('Folder not found', 404);
   }
 
-  if (folder._count.children > 0 || folder._count.documents > 0) {
+  const documentCount = await prisma.document.count({
+    where: { folderId, deletedAt: null },
+  });
+
+  if (folder._count.children > 0 || documentCount > 0) {
     return jsonError('Only empty folders can be deleted. Move or delete nested folders and documents first.', 409);
   }
 

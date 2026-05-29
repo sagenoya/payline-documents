@@ -6,26 +6,32 @@ import { ChevronRight, Home, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DocumentList } from '@/components/document-list';
 import { FolderGrid } from '@/components/folder-grid';
+import { PaginationControls } from '@/components/pagination-controls';
 import { CreateFolderButton } from '@/components/create-folder-button';
-import { useDocuments, useFolder } from '@/hooks/use-dms';
+import { useDocumentsPage, useFolder } from '@/hooks/use-dms';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Loader } from '@/components/ui/loader';
 
 export function FolderDetailClient({ folderId }: { folderId: string }) {
   const { data: folder, isLoading } = useFolder(folderId);
   const [search, setSearch] = React.useState('');
+  const [page, setPage] = React.useState(1);
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const {
     data: documentsData,
     isLoading: documentsLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useDocuments({
+  } = useDocumentsPage({
     folderId,
     search: debouncedSearch || undefined,
     take: 15,
+    page,
+    sortBy: 'updatedAt',
+    sortDirection: 'desc',
   });
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, folderId]);
 
   const filteredFolders = React.useMemo(() => {
     if (!folder?.children) return [];
@@ -33,8 +39,6 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
     const lower = search.toLowerCase();
     return folder.children.filter((f) => f.name.toLowerCase().includes(lower));
   }, [folder?.children, search]);
-
-  const documents = documentsData?.pages.flatMap((page) => page.data) || [];
 
   if (isLoading) {
     return <Loader text="Loading folder..." />;
@@ -85,16 +89,8 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
         <Loader text="Loading documents..." />
       ) : (
         <div className="space-y-4">
-          <DocumentList documents={documents} emptyText={search ? 'No documents match your filter.' : 'No documents in this folder yet.'} />
-          {hasNextPage && (
-            <button
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="w-full rounded-md border bg-muted/50 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              {isFetchingNextPage ? 'Loading more...' : 'Load more'}
-            </button>
-          )}
+          <DocumentList documents={documentsData?.data || []} emptyText={search ? 'No documents match your filter.' : 'No documents in this folder yet.'} />
+          {documentsData && <PaginationControls meta={documentsData.meta} onPageChange={setPage} />}
         </div>
       )}
     </div>
