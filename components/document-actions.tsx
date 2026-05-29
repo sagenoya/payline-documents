@@ -159,7 +159,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
           </TooltipTrigger>
           <TooltipContent>Version history</TooltipContent>
         </Tooltip>
-        <Tooltip>
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
@@ -171,8 +171,8 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
             </Button>
           </TooltipTrigger>
           <TooltipContent>Download</TooltipContent>
-        </Tooltip>
-        {canDelete && (
+        </Tooltip> */}
+        {/* {canDelete && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -187,7 +187,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
             </TooltipTrigger>
             <TooltipContent>Delete</TooltipContent>
           </Tooltip>
-        )}
+        )} */}
       </div>
 
       <DeleteConfirmation
