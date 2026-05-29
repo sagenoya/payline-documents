@@ -91,7 +91,7 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
         />
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-primary cursor-help" tabIndex={0}>
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-primary cursor-pointer" tabIndex={0}>
               <Icon className="size-4" />
             </span>
           </TooltipTrigger>
