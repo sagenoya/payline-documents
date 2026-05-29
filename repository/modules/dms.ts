@@ -114,4 +114,16 @@ export class DmsModule extends FetchFactory {
   getActivity(take = 15, page = 1, filter: ActivityFilter = 'all'): Promise<ApiResponse<Paginated<ActivityLogType>>> {
     return this.call('GET', API_URLS.dms.activity, { query: { take, page, filter } });
   }
+
+  getDocumentVersions(documentId: string): Promise<ApiResponse<{ currentVersion: number, versions: any[] }>> {
+    return this.call('GET', API_URLS.dms.documentVersions(documentId));
+  }
+
+  bulkDeleteDocuments(documentIds: string[]): Promise<ApiResponse<{ deletedCount: number, failedCount: number }>> {
+    return this.call('POST', API_URLS.dms.bulkDelete, { body: { documentIds } });
+  }
+
+  bulkMoveDocuments(documentIds: string[], folderId: string | null): Promise<ApiResponse<{ movedCount: number, failedCount: number }>> {
+    return this.call('POST', API_URLS.dms.bulkMove, { body: { documentIds, folderId } });
+  }
 }

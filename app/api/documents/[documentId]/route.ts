@@ -52,7 +52,7 @@ export async function PATCH(
 
   const document = await prisma.document.findFirst({
     where: { id: documentId, deletedAt: null },
-    select: { id: true, title: true, folderId: true, uploadedById: true },
+    select: { id: true, title: true, folderId: true, uploadedById: true, version: true, fileUrl: true, fileKey: true, mimeType: true, size: true },
   });
 
   if (!document) {
@@ -74,12 +74,33 @@ export async function PATCH(
     Object.prototype.hasOwnProperty.call(parsed.data, 'folderId') &&
     parsed.data.folderId !== document.folderId;
 
-  const updatedDocument = await prisma.document.update({
-    where: { id: documentId },
-    data: {
-      ...parsed.data,
-      ...(parsed.data.category ? { category: parsed.data.category as DocumentCategory } : {}),
-    },
+  const isUpdatingFile =
+    Object.prototype.hasOwnProperty.call(parsed.data, 'fileUrl') &&
+    parsed.data.fileUrl !== document.fileUrl;
+
+  const updatedDocument = await prisma.$transaction(async (tx) => {
+    if (isUpdatingFile) {
+      await tx.documentVersion.create({
+        data: {
+          documentId: document.id,
+          version: document.version,
+          fileUrl: document.fileUrl,
+          fileKey: document.fileKey,
+          mimeType: document.mimeType,
+          size: document.size,
+          uploadedById: document.uploadedById,
+        },
+      });
+    }
+
+    return tx.document.update({
+      where: { id: documentId },
+      data: {
+        ...parsed.data,
+        ...(parsed.data.category ? { category: parsed.data.category as DocumentCategory } : {}),
+        ...(isUpdatingFile ? { version: { increment: 1 } } : {}),
+      },
+    });
   });
 
   await logActivity({

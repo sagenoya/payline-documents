@@ -1,9 +1,10 @@
 import { FileImage, FileSpreadsheet, FileText, FileType } from 'lucide-react';
 import { DocumentActions } from '@/components/document-actions';
-import { Badge } from '@/components/ui/badge';
+import { BulkActionsBar } from '@/components/bulk-actions-bar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { categoryLabels } from '@/lib/dms';
 import { formatBytes, formatDate } from '@/lib/formatters';
+import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
 
 function getFileIcon(mimeType: string) {
@@ -28,6 +29,8 @@ export function DocumentList({
   documents: DocumentSummary[];
   emptyText?: string;
 }) {
+  const { selectedDocumentIds, selectAllDocuments, clearDocumentSelection } = useDmsStore();
+
   if (!documents.length) {
     return (
       <div className="flex min-h-48 items-center justify-center rounded-lg border border-dashed bg-background">
@@ -41,47 +44,76 @@ export function DocumentList({
     );
   }
 
+  const allSelected = documents.length > 0 && documents.every((doc) => selectedDocumentIds.includes(doc.id));
+
   return (
-    <div className="overflow-hidden rounded-lg border bg-background">
-      <div className="divide-y">
-        {documents.map((document) => (
-          <DocumentRow key={document.id} document={document} />
-        ))}
+    <>
+      <div className="overflow-hidden rounded-lg border bg-background">
+        <div className="flex items-center gap-3 border-b bg-muted/30 px-4 py-2">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                selectAllDocuments(Array.from(new Set([...selectedDocumentIds, ...documents.map((d) => d.id)])));
+              } else {
+                const remainingIds = selectedDocumentIds.filter(
+                  (id) => !documents.some((doc) => doc.id === id),
+                );
+                selectAllDocuments(remainingIds);
+              }
+            }}
+            aria-label="Select all"
+          />
+          <span className="text-sm font-medium text-muted-foreground">Select All</span>
+        </div>
+        <div className="divide-y">
+          {documents.map((document) => (
+            <DocumentRow key={document.id} document={document} />
+          ))}
+        </div>
       </div>
-    </div>
+      <BulkActionsBar documents={documents} />
+    </>
   );
 }
 
 function DocumentRow({ document }: { document: DocumentSummary }) {
   const Icon = getFileIcon(document.mimeType);
+  const { selectedDocumentIds, toggleDocumentSelection } = useDmsStore();
 
   return (
-    <div className="grid gap-3 px-3 py-3 text-sm w-full grid-cols-4 lg:items-center">
+    <div className="flex flex-col gap-2 px-4 py-3 text-sm w-full md:grid md:grid-cols-[2.5fr_1fr_1fr_auto] md:gap-4 md:items-center">
       <div className="flex min-w-0 items-center gap-3">
+        <Checkbox
+          checked={selectedDocumentIds.includes(document.id)}
+          onCheckedChange={() => toggleDocumentSelection(document.id)}
+          aria-label={`Select ${document.title}`}
+        />
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-primary">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-primary cursor-help" tabIndex={0}>
               <Icon className="size-4" />
-            </div>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{getFileTypeName(document.mimeType)}</TooltipContent>
         </Tooltip>
-        <div className="min-w-0">
-          <p className="flex items-center gap-2  font-medium text-foreground" title={document.title}>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground break-words leading-snug" title={document.title}>
             {document.title}
             {new Date(document.updatedAt).getTime() - new Date(document.createdAt).getTime() > 1000 && (
-              <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Edited</span>
+              <span className="inline-block align-middle ml-2 shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Edited</span>
             )}
           </p>
-          <small className="block truncate">
+          <small className="block text-muted-foreground mt-0.5">
             {formatBytes(document.size)} {document.folder?.name ? `· ${document.folder.name}` : ''}
           </small>
         </div>
       </div>
-      {/* <Badge>{categoryLabels[document.category]}</Badge> */}
-      <span className="truncate text-muted-foreground" title={document.uploadedBy.name}>{document.uploadedBy.name}</span>
-      <span className="text-muted-foreground" title={formatDate(document.updatedAt)}>{formatDate(document.updatedAt)}</span>
-      <DocumentActions document={document} />
+      <div className="flex items-center justify-between gap-4 md:contents">
+        <span className="truncate text-muted-foreground md:max-w-[200px]" title={document.uploadedBy.name}>{document.uploadedBy.name}</span>
+        <span className="text-muted-foreground text-xs md:text-sm" title={formatDate(document.updatedAt)}>{formatDate(document.updatedAt)}</span>
+        <DocumentActions document={document} />
+      </div>
     </div>
   );
 }

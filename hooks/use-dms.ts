@@ -294,3 +294,42 @@ export function useActivityPage(take = 15, page = 1, filter: ActivityFilter = 'a
     placeholderData: (previousData) => previousData,
   });
 }
+
+export function useDocumentVersions(documentId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['dms', 'documentVersions', documentId],
+    queryFn: async () => (await $api.dms.getDocumentVersions(documentId)).data,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useBulkDeleteDocuments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (documentIds: string[]) => $api.dms.bulkDeleteDocuments(documentIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
+    },
+  });
+}
+
+export function useBulkMoveDocuments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ documentIds, folderId }: { documentIds: string[]; folderId: string | null }) =>
+      $api.dms.bulkMoveDocuments(documentIds, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
+    },
+  });
+}

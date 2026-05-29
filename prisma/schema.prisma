@@ -38,17 +38,18 @@ enum ActivityAction {
 }
 
 model User {
-  id          String              @id @default(cuid())
-  clerkUserId String              @unique
-  email       String              @unique
-  name        String
-  imageUrl    String?
-  onboarded   Boolean             @default(false)
-  profile     Profile?
-  documents   Document[]          @relation("UploadedDocuments")
-  activityLogs ActivityLog[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id               String              @id @default(cuid())
+  clerkUserId      String              @unique
+  email            String              @unique
+  name             String
+  imageUrl         String?
+  onboarded        Boolean             @default(false)
+  profile          Profile?
+  documents        Document[]          @relation("UploadedDocuments")
+  documentVersions DocumentVersion[]
+  activityLogs     ActivityLog[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 }
 
 model Profile {
@@ -81,6 +82,7 @@ model Document {
   title          String
   description    String?
   category       DocumentCategory
+  version        Int                 @default(1)
   fileUrl        String
   fileKey        String
   mimeType       String
@@ -90,6 +92,7 @@ model Document {
   folderId       String?
   folder         Folder?             @relation(fields: [folderId], references: [id], onDelete: SetNull)
   activityLogs   ActivityLog[]
+  versions       DocumentVersion[]
   lastAccessedAt DateTime?
   deletedAt      DateTime?
   deletedById    String?
@@ -105,6 +108,23 @@ model Document {
   @@index([folderId, updatedAt])
   @@index([category, updatedAt])
   @@index([uploadedById, updatedAt])
+}
+
+model DocumentVersion {
+  id           String   @id @default(cuid())
+  documentId   String
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version      Int
+  fileUrl      String
+  fileKey      String
+  mimeType     String
+  size         Int
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+
+  @@index([documentId])
+  @@index([uploadedById])
 }
 
 model ActivityLog {

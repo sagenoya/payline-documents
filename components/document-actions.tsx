@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Copy, Download, Eye, FolderOpen, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Download, Eye, FolderOpen, History, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
+import { DocumentVersionsModal } from '@/components/document-versions-modal';
 import { useDeleteDocument, useLogDocumentAccess, useProfile, useRestoreDocument } from '@/hooks/use-dms';
 import { canDeleteDocument } from '@/lib/dms';
 import { useDmsStore } from '@/store/dms-store';
@@ -19,6 +20,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
   const { data: user } = useProfile();
   const setEditingDocument = useDmsStore((s) => s.setEditingDocument);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
 
   const canEdit = user?.id === document.uploadedById || user?.profile?.companyRole === 'CEO';
   const canDelete =
@@ -149,6 +151,19 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
             <Button
               variant="ghost"
               size="icon-sm"
+              aria-label={`Version history for ${document.title}`}
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Version history</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
               aria-label={`Download ${document.title}`}
               onClick={() => openDocument('DOWNLOAD')}
             >
@@ -182,6 +197,13 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
         isPending={deleteDocument.isPending}
         onCancel={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
+      />
+
+      <DocumentVersionsModal
+        documentId={document.id}
+        documentTitle={document.title}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
       />
     </>
   );

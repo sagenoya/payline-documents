@@ -6,10 +6,14 @@ type DmsState = {
   activeFolderId: string | null;
   searchTerm: string;
   editingDocument: DocumentSummary | null;
+  selectedDocumentIds: string[];
   setUploadModalOpen: (open: boolean) => void;
   setActiveFolderId: (folderId: string | null) => void;
   setSearchTerm: (searchTerm: string) => void;
   setEditingDocument: (document: DocumentSummary | null) => void;
+  toggleDocumentSelection: (id: string) => void;
+  selectAllDocuments: (ids: string[]) => void;
+  clearDocumentSelection: () => void;
 };
 
 export const useDmsStore = create<DmsState>((set) => ({
@@ -17,8 +21,17 @@ export const useDmsStore = create<DmsState>((set) => ({
   activeFolderId: null,
   searchTerm: '',
   editingDocument: null,
+  selectedDocumentIds: [],
   setUploadModalOpen: (uploadModalOpen) => set({ uploadModalOpen }),
   setActiveFolderId: (activeFolderId) => set({ activeFolderId }),
   setSearchTerm: (searchTerm) => set({ searchTerm }),
   setEditingDocument: (editingDocument) => set({ editingDocument }),
+  toggleDocumentSelection: (id) =>
+    set((state) => ({
+      selectedDocumentIds: state.selectedDocumentIds.includes(id)
+        ? state.selectedDocumentIds.filter((docId) => docId !== id)
+        : [...state.selectedDocumentIds, id],
+    })),
+  selectAllDocuments: (ids) => set({ selectedDocumentIds: ids }),
+  clearDocumentSelection: () => set({ selectedDocumentIds: [] }),
 }));
