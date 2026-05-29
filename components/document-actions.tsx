@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Copy, Download, Eye, FolderOpen, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { useDeleteDocument, useLogDocumentAccess, useProfile, useRestoreDocument } from '@/hooks/use-dms';
 import { canDeleteDocument } from '@/lib/dms';
@@ -89,64 +90,88 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
     <>
       <div className="flex items-center justify-end gap-1">
         {document.folderId && (
-          <Link
-            href={`/folders/${document.folderId}`}
-            aria-label={`Open folder for ${document.title}`}
-            title="Open containing folder"
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <FolderOpen className="size-4" />
-          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href={`/folders/${document.folderId}`}
+                aria-label={`Open folder for ${document.title}`}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <FolderOpen className="size-4" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>Open containing folder</TooltipContent>
+          </Tooltip>
         )}
         {canEdit && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Edit ${document.title}`}
-            title="Edit"
-            onClick={() => setEditingDocument(document)}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Edit ${document.title}`}
+                onClick={() => setEditingDocument(document)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit</TooltipContent>
+          </Tooltip>
         )}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Preview ${document.title}`}
-          title="Preview"
-          onClick={() => openDocument('VIEW')}
-        >
-          <Eye className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Copy link for ${document.title}`}
-          title="Copy link"
-          onClick={copyLink}
-        >
-          <Copy className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Download ${document.title}`}
-          title="Download"
-          onClick={() => openDocument('DOWNLOAD')}
-        >
-          <Download className="size-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Preview ${document.title}`}
+              onClick={() => openDocument('VIEW')}
+            >
+              <Eye className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Preview</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Copy link for ${document.title}`}
+              onClick={copyLink}
+            >
+              <Copy className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Copy link</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Download ${document.title}`}
+              onClick={() => openDocument('DOWNLOAD')}
+            >
+              <Download className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Download</TooltipContent>
+        </Tooltip>
         {canDelete && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${document.title}`}
-            title="Delete"
-            onClick={() => setDeleteOpen(true)}
-            disabled={deleteDocument.isPending}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Delete ${document.title}`}
+                onClick={() => setDeleteOpen(true)}
+                disabled={deleteDocument.isPending}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
         )}
       </div>
 

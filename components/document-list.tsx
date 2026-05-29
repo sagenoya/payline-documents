@@ -1,6 +1,7 @@
 import { FileImage, FileSpreadsheet, FileText, FileType } from 'lucide-react';
 import { DocumentActions } from '@/components/document-actions';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { categoryLabels } from '@/lib/dms';
 import { formatBytes, formatDate } from '@/lib/formatters';
 import type { DocumentSummary } from '@/types/dms';
@@ -55,16 +56,18 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
   const Icon = getFileIcon(document.mimeType);
 
   return (
-    <div className="grid gap-3 px-3 py-3 text-sm lg:grid-cols-[1fr_120px_150px_120px_150px] lg:items-center">
+    <div className="grid gap-3 px-3 py-3 text-sm w-full grid-cols-4 lg:items-center">
       <div className="flex min-w-0 items-center gap-3">
-        <div
-          title={getFileTypeName(document.mimeType)}
-          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-primary"
-        >
-          <Icon className="size-4" />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-subtle text-primary">
+              <Icon className="size-4" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>{getFileTypeName(document.mimeType)}</TooltipContent>
+        </Tooltip>
         <div className="min-w-0">
-          <p className="flex items-center gap-2 truncate font-medium text-foreground" title={document.title}>
+          <p className="flex items-center gap-2  font-medium text-foreground" title={document.title}>
             {document.title}
             {new Date(document.updatedAt).getTime() - new Date(document.createdAt).getTime() > 1000 && (
               <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Edited</span>
@@ -75,7 +78,7 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
           </small>
         </div>
       </div>
-      <Badge>{categoryLabels[document.category]}</Badge>
+      {/* <Badge>{categoryLabels[document.category]}</Badge> */}
       <span className="truncate text-muted-foreground" title={document.uploadedBy.name}>{document.uploadedBy.name}</span>
       <span className="text-muted-foreground" title={formatDate(document.updatedAt)}>{formatDate(document.updatedAt)}</span>
       <DocumentActions document={document} />
