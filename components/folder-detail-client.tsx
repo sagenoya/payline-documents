@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ChevronRight, Home, Search } from 'lucide-react';
+import { ChevronRight, Home, Search, UploadCloud } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DocumentList } from '@/components/document-list';
 import { FolderGrid } from '@/components/folder-grid';
@@ -11,9 +11,11 @@ import { CreateFolderButton } from '@/components/create-folder-button';
 import { useDocumentsPage, useFolder } from '@/hooks/use-dms';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Loader } from '@/components/ui/loader';
+import { useDmsStore } from '@/store/dms-store';
 
 export function FolderDetailClient({ folderId }: { folderId: string }) {
   const { data: folder, isLoading } = useFolder(folderId);
+  const setActiveFolderId = useDmsStore((s) => s.setActiveFolderId);
   const [search, setSearch] = React.useState('');
   const [page, setPage] = React.useState(1);
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
@@ -28,6 +30,12 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
     sortBy: 'updatedAt',
     sortDirection: 'desc',
   });
+
+  // Sync the active folder so drag-and-drop + upload modal auto-select it
+  React.useEffect(() => {
+    setActiveFolderId(folderId);
+    return () => setActiveFolderId(null);
+  }, [folderId, setActiveFolderId]);
 
   React.useEffect(() => {
     setPage(1);
@@ -69,6 +77,10 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
         <div>
           <h1>{folder.name}</h1>
           <p className="mt-1">Nested folders and documents in this workspace.</p>
+          <p className="mt-1 text-xs text-muted-foreground/70 flex items-center gap-1">
+            <UploadCloud className="size-3" />
+            Tip: Drag and drop files anywhere on this page to upload directly to this folder.
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-xs">

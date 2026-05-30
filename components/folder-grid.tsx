@@ -9,6 +9,8 @@ import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { MoveFolderModal } from '@/components/move-folder-modal';
 import { useDeleteFolder, useProfile } from '@/hooks/use-dms';
 import { canDeleteFolder } from '@/lib/dms';
+import { useDmsStore } from '@/store/dms-store';
+import { cn } from '@/lib/utils';
 import type { FolderSummary } from '@/types/dms';
 
 export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
@@ -36,48 +38,14 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
     <>
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {folders.map((folder) => (
-          <div
+          <FolderCard
             key={folder.id}
-            className="group relative rounded-lg border bg-background transition hover:border-primary/50 hover:bg-brand-subtle"
-          >
-            <Link href={`/folders/${folder.id}`} className="flex items-center gap-3 p-3 pr-11">
-              <div className="flex size-10 items-center justify-center rounded-md bg-muted text-primary">
-                <Folder className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate uppercase font-bold text-foreground">{folder.name}</p>
-                {folder._count && (
-                  <small>
-                    {folder._count.documents} docs · {folder._count.children} folders
-                  </small>
-                )}
-              </div>
-            </Link>
-
-            {canDelete && (
-              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Move ${folder.name}`}
-                  onClick={() => setFolderToMove(folder)}
-                >
-                  <FolderInput className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Delete ${folder.name}`}
-                  disabled={deleteFolder.isPending}
-                  onClick={() => setFolderToDelete(folder)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            )}
-          </div>
+            folder={folder}
+            canDelete={canDelete}
+            deleteFolderPending={deleteFolder.isPending}
+            onDelete={setFolderToDelete}
+            onMove={setFolderToMove}
+          />
         ))}
       </div>
 
@@ -102,5 +70,136 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
         }}
       />
     </>
+  );
+}
+
+function FolderCard({
+  folder,
+  canDelete,
+  deleteFolderPending,
+  onDelete,
+  onMove,
+}: {
+  folder: FolderSummary;
+  canDelete: boolean;
+  deleteFolderPending: boolean;
+  onDelete: (folder: FolderSummary) => void;
+  onMove: (folder: FolderSummary) => void;
+}) {
+  const { data: profile } = useProfile();
+  const setUploadModalOpen = useDmsStore((s) => s.setUploadModalOpen);
+  const setPendingDropFiles = useDmsStore((s) => s.setPendingDropFiles);
+  const setActiveFolderId = useDmsStore((s) => s.setActiveFolderId);
+
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const canUpload = profile?.canUpload ?? false;
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragOver(true);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (!canUpload) {
+      toast.error('You do not have upload access.');
+      return;
+    }
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length === 0) return;
+
+    // Deduplicate files by name
+    const seen = new Set<string>();
+    const uniqueFiles = droppedFiles.filter((file) => {
+      if (seen.has(file.name)) return false;
+      seen.add(file.name);
+      return true;
+    });
+
+    const filesToUpload = uniqueFiles.slice(0, 6);
+    if (uniqueFiles.length > 6) {
+      toast.warning('Only the first 6 files will be uploaded.');
+    }
+    if (droppedFiles.length !== uniqueFiles.length) {
+      toast.info('Duplicate file names were removed.');
+    }
+
+    setActiveFolderId(folder.id);
+    setPendingDropFiles(filesToUpload);
+    setUploadModalOpen(true);
+  }
+
+  return (
+    <div
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={cn(
+        'group relative rounded-lg border bg-background transition duration-200',
+        isDragOver
+          ? 'border-primary bg-primary/5 ring-2 ring-primary/20 scale-[1.02] shadow-sm'
+          : 'hover:border-primary/50 hover:bg-brand-subtle'
+      )}
+    >
+      <Link href={`/folders/${folder.id}`} className="flex items-center gap-3 p-3 pr-11">
+        <div className={cn(
+          'flex size-10 items-center justify-center rounded-md bg-muted text-primary transition duration-200',
+          isDragOver && 'bg-primary text-primary-foreground'
+        )}>
+          <Folder className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate uppercase font-bold text-foreground">{folder.name}</p>
+          {folder._count && (
+            <small>
+              {folder._count.documents} docs · {folder._count.children} folders
+            </small>
+          )}
+        </div>
+      </Link>
+
+      {canDelete && (
+        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Move ${folder.name}`}
+            onClick={() => onMove(folder)}
+          >
+            <FolderInput className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${folder.name}`}
+            disabled={deleteFolderPending}
+            onClick={() => onDelete(folder)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

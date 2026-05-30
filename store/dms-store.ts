@@ -7,6 +7,7 @@ type DmsState = {
   searchTerm: string;
   editingDocument: DocumentSummary | null;
   selectedDocumentIds: string[];
+  pendingDropFiles: File[];
   setUploadModalOpen: (open: boolean) => void;
   setActiveFolderId: (folderId: string | null) => void;
   setSearchTerm: (searchTerm: string) => void;
@@ -14,6 +15,7 @@ type DmsState = {
   toggleDocumentSelection: (id: string) => void;
   selectAllDocuments: (ids: string[]) => void;
   clearDocumentSelection: () => void;
+  setPendingDropFiles: (files: File[]) => void;
 };
 
 export const useDmsStore = create<DmsState>((set) => ({
@@ -22,6 +24,7 @@ export const useDmsStore = create<DmsState>((set) => ({
   searchTerm: '',
   editingDocument: null,
   selectedDocumentIds: [],
+  pendingDropFiles: [],
   setUploadModalOpen: (uploadModalOpen) => set({ uploadModalOpen }),
   setActiveFolderId: (activeFolderId) => set({ activeFolderId }),
   setSearchTerm: (searchTerm) => set({ searchTerm }),
@@ -34,4 +37,5 @@ export const useDmsStore = create<DmsState>((set) => ({
     })),
   selectAllDocuments: (ids) => set({ selectedDocumentIds: ids }),
   clearDocumentSelection: () => set({ selectedDocumentIds: [] }),
+  setPendingDropFiles: (pendingDropFiles) => set({ pendingDropFiles }),
 }));

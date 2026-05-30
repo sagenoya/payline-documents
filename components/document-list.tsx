@@ -1,4 +1,4 @@
-import { FileImage, FileSpreadsheet, FileText, FileType } from 'lucide-react';
+import { FileImage, FileSpreadsheet, FileText, FileType, UploadCloud } from 'lucide-react';
 import { DocumentActions } from '@/components/document-actions';
 import { BulkActionsBar } from '@/components/bulk-actions-bar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,6 +39,10 @@ export function DocumentList({
             <FileText className="size-5" />
           </div>
           <p>{emptyText}</p>
+          <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+            <UploadCloud className="size-3" />
+            You can drag and drop files here to upload.
+          </p>
         </div>
       </div>
     );

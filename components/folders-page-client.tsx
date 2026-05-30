@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Search } from 'lucide-react';
+import { Search, UploadCloud } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { FolderGrid } from '@/components/folder-grid';
 import { DocumentList } from '@/components/document-list';
@@ -72,6 +72,10 @@ export function FoldersPageClient() {
 
       <section className="space-y-3">
         <h2 className="text-base">Top-level folders</h2>
+        <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+          <UploadCloud className="size-3" />
+          Tip: You can drag and drop files anywhere on a folder page to upload directly into it.
+        </p>
         {foldersLoading ? (
           <Loader text="Loading folders..." />
         ) : (

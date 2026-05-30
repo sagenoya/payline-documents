@@ -25,6 +25,8 @@ export function UploadDocumentModal() {
   const open = useDmsStore((state) => state.uploadModalOpen);
   const setOpen = useDmsStore((state) => state.setUploadModalOpen);
   const activeFolderId = useDmsStore((state) => state.activeFolderId);
+  const pendingDropFiles = useDmsStore((state) => state.pendingDropFiles);
+  const setPendingDropFiles = useDmsStore((state) => state.setPendingDropFiles);
   const { data: allFolders = [], refetch: refetchFolders } = useAllFolders({ enabled: open });
   const createDocument = useCreateDocument();
   const createFolder = useCreateFolder(activeFolderId);
@@ -49,6 +51,9 @@ export function UploadDocumentModal() {
       setForm((f) => ({ ...f, folderId: activeFolderId || '' }));
     }
   }, [activeFolderId, open]);
+
+  // Auto-upload dropped files when modal opens with pending files
+  const startUploadRef = React.useRef<((files: File[]) => void) | null>(null);
 
   const { startUpload, isUploading } = useUploadThing('documentUploader', {
     onClientUploadComplete: (files) => {
@@ -79,6 +84,28 @@ export function UploadDocumentModal() {
       toast.error(`Upload failed: ${error.message}`);
     },
   });
+
+  // Keep ref in sync so drag-and-drop effect can call it
+  startUploadRef.current = startUpload;
+
+  const dragUploadTriggered = React.useRef(false);
+
+  // Trigger upload for files dropped before modal opened
+  React.useEffect(() => {
+    if (open && pendingDropFiles.length > 0 && !isUploading && !dragUploadTriggered.current) {
+      dragUploadTriggered.current = true;
+      const filesToUpload = pendingDropFiles.slice(0, 6);
+      startUpload(filesToUpload);
+      setPendingDropFiles([]);
+    }
+  }, [open, pendingDropFiles, isUploading, startUpload, setPendingDropFiles]);
+
+  // Reset the trigger guard when modal closes
+  React.useEffect(() => {
+    if (!open) {
+      dragUploadTriggered.current = false;
+    }
+  }, [open]);
 
   function reset() {
     setUploadedFiles([]);

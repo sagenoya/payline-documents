@@ -10,6 +10,7 @@ import { UserMenu } from '@/components/user-menu';
 import { useProfile } from '@/hooks/use-dms';
 import { cn } from '@/lib/utils';
 import { useDmsStore } from '@/store/dms-store';
+import { DropZoneOverlay } from '@/components/drop-zone-overlay';
 
 const UploadDocumentModal = dynamic(
   () => import('@/components/upload-document-modal').then((mod) => mod.UploadDocumentModal),
@@ -43,6 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [profile, profileLoading, router]);
 
   return (
+    <DropZoneOverlay>
     <div className="min-h-screen bg-muted/30">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-background px-3 py-4 lg:block">
         <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-2">
@@ -123,5 +125,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {uploadModalOpen && <UploadDocumentModal />}
       {editingDocument && <EditDocumentModal />}
     </div>
+    </DropZoneOverlay>
   );
 }
