@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, CheckCircle2, UploadCloud } from 'lucide-react';
+import { Loader2, CheckCircle2, UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ export function UploadDocumentModal() {
   const createDocument = useCreateDocument();
   const createFolder = useCreateFolder(activeFolderId);
 
-  const [uploadedFile, setUploadedFile] = React.useState<UploadedFile | null>(null);
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   
   // Folder creation state
@@ -52,18 +52,24 @@ export function UploadDocumentModal() {
 
   const { startUpload, isUploading } = useUploadThing('documentUploader', {
     onClientUploadComplete: (files) => {
-      const file = files[0];
-      if (!file) return;
-      setUploadedFile({
+      if (!files?.length) return;
+      const uploaded = files.map((file) => ({
         url: file.ufsUrl || file.url,
         key: file.key,
         name: file.name,
         size: file.size,
         type: file.type || 'application/octet-stream',
+      }));
+      setUploadedFiles((prev) => {
+        const filteredNew = uploaded.filter((newF) => !prev.some((oldF) => oldF.key === newF.key));
+        const combined = [...prev, ...filteredNew];
+        if (combined.length === 1) {
+          setForm((current) => ({ ...current, title: current.title || combined[0].name }));
+        }
+        return combined;
       });
       setUploadProgress(100);
-      setForm((current) => ({ ...current, title: current.title || file.name }));
-      toast.success('File uploaded successfully');
+      toast.success(`Successfully uploaded ${files.length} file(s)`);
     },
     onUploadProgress: (progress) => {
       setUploadProgress(progress);
@@ -75,7 +81,7 @@ export function UploadDocumentModal() {
   });
 
   function reset() {
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setUploadProgress(0);
     setForm({ title: '', description: '', category: 'OPERATIONS', folderId: activeFolderId || '' });
     setFolderName('');
@@ -98,26 +104,36 @@ export function UploadDocumentModal() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!uploadedFile) return;
+    if (uploadedFiles.length === 0) return;
 
     try {
-      await createDocument.mutateAsync({
-        title: form.title || uploadedFile.name,
-        description: form.description || null,
-        category: form.category,
-        folderId: form.folderId || null,
-        fileUrl: uploadedFile.url,
-        fileKey: uploadedFile.key,
-        mimeType: uploadedFile.type || 'application/octet-stream',
-        size: uploadedFile.size,
-      });
-      toast.success('Document saved successfully');
+      await Promise.all(
+        uploadedFiles.map((file) =>
+          createDocument.mutateAsync({
+            title: uploadedFiles.length === 1 && form.title.trim() ? form.title.trim() : file.name,
+            description: form.description || null,
+            category: form.category,
+            folderId: form.folderId || null,
+            fileUrl: file.url,
+            fileKey: file.key,
+            mimeType: file.type || 'application/octet-stream',
+            size: file.size,
+          })
+        )
+      );
+      toast.success(`Saved ${uploadedFiles.length} document(s) successfully`);
       reset();
       setOpen(false);
     } catch (error) {
-      toast.error('Failed to save document');
+      toast.error('Failed to save document(s)');
     }
   }
+
+  const isSubmitDisabled =
+    uploadedFiles.length === 0 ||
+    !form.folderId ||
+    (uploadedFiles.length === 1 && !form.title.trim()) ||
+    createDocument.isPending;
 
   return (
     <Modal
@@ -132,13 +148,19 @@ export function UploadDocumentModal() {
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="title" className="mb-1.5 block text-sm font-medium">Title</label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="title" className="mb-1.5 block text-sm font-medium">Title</label>
+            {uploadedFiles.length > 1 && (
+              <span className="text-xs text-muted-foreground mb-1.5">(Note: File title in bulk files uses file names)</span>
+            )}
+          </div>
           <Input
             id="title"
             value={form.title}
             onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            placeholder="Board minutes, employee handbook, vendor agreement"
+            placeholder={uploadedFiles.length > 1 ? "File title in bulk files uses file names" : "Board minutes, employee handbook, vendor agreement"}
             className="focus-visible:ring-0 focus-visible:border-foreground/30"
+            disabled={uploadedFiles.length > 1}
           />
         </div>
 
@@ -201,26 +223,81 @@ export function UploadDocumentModal() {
         </div>
 
         <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center transition-colors">
-          {uploadedFile ? (
+          {uploadedFiles.length > 0 ? (
             <div className="flex flex-col items-center justify-center gap-3">
               <div className="flex size-12 items-center justify-center rounded-full bg-green-500/10 text-green-600">
                 <CheckCircle2 className="size-6" />
               </div>
-              <div>
-                <p className="font-medium text-foreground">{uploadedFile.name}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Ready to save ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
+              <div className="w-full max-w-md">
+                <p className="font-medium text-foreground">{uploadedFiles.length} file(s) uploaded successfully</p>
+                <ul className="mt-2 text-xs text-muted-foreground divide-y border rounded bg-background p-2 text-left max-h-36 overflow-y-auto">
+                  {uploadedFiles.map((file) => (
+                    <li key={file.key} className="py-1 flex justify-between gap-2 items-center">
+                      <span className="truncate font-medium">{file.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px]">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-muted"
+                          onClick={() => setUploadedFiles((prev) => prev.filter((f) => f.key !== file.key))}
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                className="mt-2"
-                onClick={() => setUploadedFile(null)}
-              >
-                Choose a different file
-              </Button>
+              <div className="flex items-center gap-2 mt-2">
+                <Button 
+                  type="button" 
+                  disabled={isUploading}
+                  variant="outline"
+                  size="sm"
+                  className="relative overflow-hidden"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Add files'
+                  )}
+                  {!isUploading && (
+                    <input 
+                      type="file" 
+                      multiple
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) {
+                          const currentCount = uploadedFiles.length;
+                          const remainingCount = 6 - currentCount;
+                          if (remainingCount <= 0) {
+                            toast.error('You can only upload up to 6 files at a time. Please remove some first.');
+                            return;
+                          }
+                          const filesToUpload = files.slice(0, remainingCount);
+                          if (files.length > remainingCount) {
+                            toast.warning(`Only the first ${remainingCount} file(s) will be uploaded to keep the total under 6.`);
+                          }
+                          startUpload(filesToUpload);
+                        }
+                      }} 
+                    />
+                  )}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setUploadedFiles([])}
+                >
+                  Clear all
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-3">
@@ -228,8 +305,8 @@ export function UploadDocumentModal() {
                 <UploadCloud className="size-6" />
               </div>
               <div className="space-y-1">
-                <p className="font-medium text-foreground">Select a file to upload</p>
-                <p className="text-sm text-muted-foreground">PDF, Word, Excel, Images up to 16MB</p>
+                <p className="font-medium text-foreground">Select files to upload</p>
+                <p className="text-sm text-muted-foreground">PDF, Word, Excel, Images (up to 6 files, max 16MB each)</p>
               </div>
               <Button 
                 type="button" 
@@ -247,11 +324,22 @@ export function UploadDocumentModal() {
                 {!isUploading && (
                   <input 
                     type="file" 
+                    multiple
                     className="absolute inset-0 opacity-0 cursor-pointer" 
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        startUpload([file]);
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        const currentCount = uploadedFiles.length;
+                        const remainingCount = 6 - currentCount;
+                        if (remainingCount <= 0) {
+                          toast.error('You can only upload up to 6 files at a time. Please remove some first.');
+                          return;
+                        }
+                        const filesToUpload = files.slice(0, remainingCount);
+                        if (files.length > remainingCount) {
+                          toast.warning(`Only the first ${remainingCount} file(s) will be uploaded to keep the total under 6.`);
+                        }
+                        startUpload(filesToUpload);
                       }
                     }} 
                   />
@@ -273,9 +361,9 @@ export function UploadDocumentModal() {
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button type="submit" disabled={!uploadedFile || createDocument.isPending}>
+          <Button type="submit" disabled={isSubmitDisabled}>
             {createDocument.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            Save document
+            Save {uploadedFiles.length > 1 ? `${uploadedFiles.length} documents` : 'document'}
           </Button>
         </div>
       </form>

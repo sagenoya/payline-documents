@@ -7,10 +7,10 @@ const upload = createUploadthing();
 
 export const ourFileRouter = {
   documentUploader: upload({
-    pdf: { maxFileSize: '16MB', maxFileCount: 1 },
-    image: { maxFileSize: '8MB', maxFileCount: 1 },
-    text: { maxFileSize: '4MB', maxFileCount: 1 },
-    blob: { maxFileSize: '32MB', maxFileCount: 1 },
+    pdf: { maxFileSize: '16MB', maxFileCount: 6 },
+    image: { maxFileSize: '8MB', maxFileCount: 6 },
+    text: { maxFileSize: '4MB', maxFileCount: 6 },
+    blob: { maxFileSize: '32MB', maxFileCount: 6 },
   })
     .middleware(async () => {
       const user = await requireClerkUser();
