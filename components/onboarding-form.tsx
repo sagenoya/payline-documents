@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useUpdateProfile } from '@/hooks/use-dms';
 import { COMPANY_ROLES, canUpload, roleLabels } from '@/lib/dms';
@@ -26,11 +27,12 @@ export function OnboardingForm() {
         router.push('/dashboard');
       });
     } catch (caughtError) {
-      setError(
+      const message =
         caughtError instanceof Error
           ? caughtError.message
-          : 'Unable to complete onboarding. Please try again.',
-      );
+          : 'Unable to complete onboarding. Please try again.';
+      setError(message);
+      toast.error(message);
     }
   }
 

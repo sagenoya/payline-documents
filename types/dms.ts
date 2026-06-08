@@ -24,13 +24,24 @@ export type CurrentProfile = BasicUser & {
   profile?: Profile | null;
   canUpload: boolean;
   canViewActivity: boolean;
+  isAdmin: boolean;
   onboarded: boolean;
 };
 
-export type FolderSummary = {
+export type LockMeta = {
+  locked?: boolean;
+  lockKind?: 'DOCUMENT' | 'FOLDER';
+  lockTargetId?: string;
+  lockTargetName?: string;
+  lockOwnerName?: string | null;
+};
+
+export type FolderSummary = LockMeta & {
   id: string;
   name: string;
   parentId?: string | null;
+  isSensitive?: boolean;
+  createdById?: string | null;
   createdAt: DateLike;
   updatedAt: DateLike;
   _count?: {
@@ -39,13 +50,12 @@ export type FolderSummary = {
   };
 };
 
-export type DocumentSummary = {
+export type DocumentSummary = LockMeta & {
   id: string;
   title: string;
   description?: string | null;
   category: DocumentCategory;
   isSensitive: boolean;
-  locked?: boolean;
   fileUrl: string;
   fileKey: string;
   mimeType: string;
@@ -106,7 +116,8 @@ export type NotificationItem = {
     status: AccessRequestStatus;
     expiresAt?: DateLike | null;
     requester: BasicUser;
-    document: Pick<DocumentSummary, 'id' | 'title'>;
+    document?: Pick<DocumentSummary, 'id' | 'title'> | null;
+    folder?: Pick<FolderSummary, 'id' | 'name'> | null;
   } | null;
 };
 

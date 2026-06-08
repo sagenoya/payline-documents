@@ -25,6 +25,12 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
   const [requestOpen, setRequestOpen] = React.useState(false);
 
   if (document.locked) {
+    const target = {
+      kind: document.lockKind ?? 'DOCUMENT',
+      id: document.lockTargetId ?? document.id,
+      name: document.lockTargetName ?? document.title,
+      ownerName: document.lockOwnerName ?? document.uploadedBy.name,
+    } as const;
     return (
       <>
         <div className="flex items-center justify-end gap-1">
@@ -38,7 +44,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
             Request access
           </Button>
         </div>
-        <RequestAccessModal document={document} open={requestOpen} onOpenChange={setRequestOpen} />
+        <RequestAccessModal target={target} open={requestOpen} onOpenChange={setRequestOpen} />
       </>
     );
   }

@@ -1,7 +1,7 @@
 import type { CompanyRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { canUpload } from '@/lib/dms';
-import { canViewActivity } from '@/server/access-control';
+import { canViewActivity, getExpectedRole, isAdmin } from '@/server/access-control';
 import { onboardingSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { withDbTimeout } from '@/server/db';
@@ -14,6 +14,7 @@ export async function GET() {
       ...user,
       canUpload: canUpload(user.profile?.companyRole),
       canViewActivity: canViewActivity(user.email),
+      isAdmin: isAdmin(user.email),
     });
   } catch (error) {
     console.error('Profile lookup failed', error);
@@ -30,6 +31,11 @@ export async function PATCH(request: Request) {
 
     if (!parsed.success) {
       return jsonError(parsed.error.issues[0]?.message ?? 'Invalid role', 422);
+    }
+
+    const expectedRole = getExpectedRole(user.email);
+    if (expectedRole && expectedRole !== parsed.data.companyRole) {
+      return jsonError('That role doesn’t match your account. Please select your correct role.', 422);
     }
 
     const [profile] = await withDbTimeout(

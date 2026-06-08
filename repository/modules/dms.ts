@@ -132,6 +132,14 @@ export class DmsModule extends FetchFactory {
     return this.call('POST', API_URLS.dms.documentAccessRequest(documentId));
   }
 
+  requestFolderAccess(folderId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.call('POST', API_URLS.dms.folderAccessRequest(folderId));
+  }
+
+  setFolderSensitive(folderId: string, isSensitive: boolean): Promise<ApiResponse<FolderSummary>> {
+    return this.call('PATCH', API_URLS.dms.folder(folderId), { body: { isSensitive } });
+  }
+
   getTrustedViewers(): Promise<ApiResponse<{ viewerIds: string[] }>> {
     return this.call('GET', API_URLS.dms.trustedViewers);
   }

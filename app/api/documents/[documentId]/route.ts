@@ -2,11 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { canDeleteDocument } from '@/lib/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
-import {
-  canAccessSensitiveDoc,
-  getSensitiveAccessContext,
-  maskSensitiveDocument,
-} from '@/server/document-access';
+import { getSensitiveAccessContext, maskDocument } from '@/server/document-access';
 import type { DocumentCategory } from '@prisma/client';
 import { z } from 'zod';
 
@@ -35,9 +31,8 @@ export async function GET(
   }
 
   const ctx = await getSensitiveAccessContext(user.id);
-  const accessible = canAccessSensitiveDoc(document, { id: user.id, email: user.email }, ctx);
 
-  return jsonOk(maskSensitiveDocument(document, accessible));
+  return jsonOk(maskDocument(document, { id: user.id, email: user.email }, ctx));
 }
 
 const documentEditSchema = z.object({

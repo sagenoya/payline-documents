@@ -15,11 +15,12 @@ import { cn } from '@/lib/utils';
 import type { NotificationItem } from '@/types/dms';
 
 function notificationText(n: NotificationItem) {
-  const doc = n.accessRequest?.document.title ?? 'a document';
-  const who = n.accessRequest?.requester.name ?? 'A teammate';
-  if (n.type === 'ACCESS_REQUEST') return `${who} requested access to “${doc}”.`;
-  if (n.type === 'ACCESS_GRANTED') return `Your access to “${doc}” was approved for 2 hours.`;
-  return `Your access request for “${doc}” was denied.`;
+  const ar = n.accessRequest;
+  const target = ar?.folder ? `the folder “${ar.folder.name}”` : `“${ar?.document?.title ?? 'a document'}”`;
+  const who = ar?.requester.name ?? 'A teammate';
+  if (n.type === 'ACCESS_REQUEST') return `${who} requested access to ${target}.`;
+  if (n.type === 'ACCESS_GRANTED') return `Your access to ${target} was approved for 2 hours.`;
+  return `Your access request for ${target} was denied.`;
 }
 
 export function NotificationsBell() {

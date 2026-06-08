@@ -15,6 +15,7 @@ export async function GET() {
               include: {
                 requester: { select: { id: true, name: true, email: true, imageUrl: true } },
                 document: { select: { id: true, title: true } },
+                folder: { select: { id: true, name: true } },
               },
             },
           },

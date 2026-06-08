@@ -1,12 +1,15 @@
 import { prisma } from '@/lib/prisma';
 import { canDeleteFolder } from '@/lib/dms';
+import { isAdmin } from '@/server/access-control';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
 import { getRecursiveFolderCounts } from '@/lib/folder-utils';
+import { evaluateFolderLock, getSensitiveAccessContext } from '@/server/document-access';
 import { z } from 'zod';
 
 const folderUpdateSchema = z.object({
   parentId: z.string().nullable().optional(),
+  isSensitive: z.boolean().optional(),
 });
 
 async function buildBreadcrumbs(folderId: string) {
@@ -32,7 +35,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ folderId: string }> },
 ) {
-  await requireClerkUser();
+  const user = await requireClerkUser();
   const { folderId } = await params;
 
   const rawFolder = await prisma.folder.findUnique({
@@ -48,6 +51,27 @@ export async function GET(
     return jsonError('Folder not found', 404);
   }
 
+  const ctx = await getSensitiveAccessContext(user.id);
+  const lock = evaluateFolderLock(folderId, { id: user.id, email: user.email }, ctx);
+  const breadcrumbs = await buildBreadcrumbs(folderId);
+
+  // A locked folder is visible but its contents are withheld until access is granted.
+  if (lock.locked) {
+    return jsonOk({
+      id: rawFolder.id,
+      name: rawFolder.name,
+      parentId: rawFolder.parentId,
+      isSensitive: rawFolder.isSensitive,
+      createdById: rawFolder.createdById,
+      createdAt: rawFolder.createdAt,
+      updatedAt: rawFolder.updatedAt,
+      children: [],
+      documents: [],
+      breadcrumbs,
+      ...lock,
+    });
+  }
+
   const recursiveCounts = await getRecursiveFolderCounts(rawFolder.children.map(f => f.id));
   const folder = {
     ...rawFolder,
@@ -59,14 +83,16 @@ export async function GET(
         _count: {
           children: counts?.folders || 0,
           documents: counts?.docs || 0,
-        }
+        },
+        ...evaluateFolderLock(f.id, { id: user.id, email: user.email }, ctx),
       };
     })
   };
 
   return jsonOk({
     ...folder,
-    breadcrumbs: await buildBreadcrumbs(folderId),
+    breadcrumbs,
+    ...lock,
   });
 }
 
@@ -126,15 +152,43 @@ export async function PATCH(
   const user = await requireClerkUser();
   const { folderId } = await params;
 
-  if (!canDeleteFolder(user.profile?.companyRole)) {
-    return jsonError('Only a Frontend Developer can move folders.', 403);
-  }
-
   const payload = await request.json();
   const parsed = folderUpdateSchema.safeParse(payload);
 
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid folder update', 422);
+  }
+
+  // Sensitivity toggle: handled separately from moves. The folder creator or an
+  // admin may toggle it; an unowned (legacy) folder is claimed by whoever marks it.
+  if (parsed.data.isSensitive !== undefined && parsed.data.parentId === undefined) {
+    const target = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { id: true, name: true, createdById: true },
+    });
+
+    if (!target) {
+      return jsonError('Folder not found', 404);
+    }
+
+    const isOwner = target.createdById === user.id;
+    if (!isOwner && target.createdById && !isAdmin(user.email)) {
+      return jsonError('Only the folder owner can change its sensitivity.', 403);
+    }
+
+    const updated = await prisma.folder.update({
+      where: { id: folderId },
+      data: {
+        isSensitive: parsed.data.isSensitive,
+        createdById: target.createdById ?? user.id,
+      },
+    });
+
+    return jsonOk(updated);
+  }
+
+  if (!canDeleteFolder(user.profile?.companyRole)) {
+    return jsonError('Only a Frontend Developer can move folders.', 403);
   }
 
   const nextParentId = parsed.data.parentId || null;

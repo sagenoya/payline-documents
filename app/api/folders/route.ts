@@ -3,11 +3,12 @@ import { folderCreateSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
 import { getRecursiveFolderCounts } from '@/lib/folder-utils';
+import { evaluateFolderLock, getSensitiveAccessContext } from '@/server/document-access';
 import { withDbTimeout } from '@/server/db';
 
 export async function GET(request: Request) {
   try {
-    await requireClerkUser();
+    const user = await requireClerkUser();
 
     const { searchParams } = new URL(request.url);
     const all = searchParams.get('all') === 'true';
@@ -41,6 +42,8 @@ export async function GET(request: Request) {
     );
 
     const recursiveCounts = await getRecursiveFolderCounts(rawFolders.map(f => f.id));
+    const ctx = await getSensitiveAccessContext(user.id);
+    const viewer = { id: user.id, email: user.email };
     const folders = rawFolders.map(f => {
       const counts = recursiveCounts.get(f.id);
       return {
@@ -48,7 +51,8 @@ export async function GET(request: Request) {
         _count: {
           children: counts?.folders || 0,
           documents: counts?.docs || 0,
-        }
+        },
+        ...evaluateFolderLock(f.id, viewer, ctx),
       };
     });
 
@@ -88,6 +92,7 @@ export async function POST(request: Request) {
         data: {
           name: parsed.data.name.trim(),
           parentId: parsed.data.parentId || null,
+          createdById: user.id,
         },
       }),
     );

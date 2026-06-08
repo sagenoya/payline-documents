@@ -5,31 +5,46 @@ import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { useRequestDocumentAccess } from '@/hooks/use-dms';
-import type { DocumentSummary } from '@/types/dms';
+import { useRequestDocumentAccess, useRequestFolderAccess } from '@/hooks/use-dms';
+
+export type AccessTarget = {
+  kind: 'DOCUMENT' | 'FOLDER';
+  id: string;
+  name: string;
+  ownerName?: string | null;
+};
 
 export function RequestAccessModal({
-  document,
+  target,
   open,
   onOpenChange,
 }: {
-  document: DocumentSummary;
+  target: AccessTarget;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const requestAccess = useRequestDocumentAccess();
+  const requestDoc = useRequestDocumentAccess();
+  const requestFolder = useRequestFolderAccess();
   const [requested, setRequested] = React.useState(false);
+
+  const pending = requestDoc.isPending || requestFolder.isPending;
+  const noun = target.kind === 'FOLDER' ? 'folder' : 'document';
 
   React.useEffect(() => {
     if (!open) setRequested(false);
   }, [open]);
 
   async function handleRequest() {
-    // Optimistically flip the UI before the server confirms.
     setRequested(true);
     try {
-      await requestAccess.mutateAsync(document.id);
-      toast.success(`Access requested from ${document.uploadedBy.name}`);
+      if (target.kind === 'FOLDER') {
+        await requestFolder.mutateAsync(target.id);
+      } else {
+        await requestDoc.mutateAsync(target.id);
+      }
+      toast.success(
+        target.ownerName ? `Access requested from ${target.ownerName}` : 'Access requested',
+      );
     } catch (error) {
       setRequested(false);
       toast.error(error instanceof Error ? error.message : 'Unable to request access');
@@ -37,7 +52,7 @@ export function RequestAccessModal({
   }
 
   return (
-    <Modal open={open} onOpenChange={onOpenChange} title="Restricted document" size="md">
+    <Modal open={open} onOpenChange={onOpenChange} title={`Restricted ${noun}`} size="md">
       <div className="space-y-5">
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-600">
@@ -45,12 +60,16 @@ export function RequestAccessModal({
           </div>
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              You’re not allowed to view “{document.title}”.
+              You’re not allowed to open “{target.name}”.
             </p>
             <p className="text-sm text-muted-foreground">
-              This document is marked sensitive. Request access from{' '}
-              <span className="font-medium text-foreground">{document.uploadedBy.name}</span>. If
-              approved, you’ll be able to open it for 2 hours.
+              This {noun} is marked sensitive. Request access
+              {target.ownerName ? (
+                <>
+                  {' '}from <span className="font-medium text-foreground">{target.ownerName}</span>
+                </>
+              ) : null}
+              . If approved, you’ll be able to open it for 2 hours.
             </p>
           </div>
         </div>
@@ -62,10 +81,10 @@ export function RequestAccessModal({
           <Button
             type="button"
             onClick={handleRequest}
-            disabled={requested || requestAccess.isPending}
+            disabled={requested || pending}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {requestAccess.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            {pending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {requested ? 'Request sent' : 'Request access'}
           </Button>
         </div>

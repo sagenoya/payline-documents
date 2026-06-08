@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Folder, FolderInput, Trash2 } from 'lucide-react';
+import { Folder, FolderInput, Lock, LockOpen, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { MoveFolderModal } from '@/components/move-folder-modal';
-import { useDeleteFolder, useProfile } from '@/hooks/use-dms';
+import { RequestAccessModal } from '@/components/request-access-modal';
+import { useDeleteFolder, useProfile, useSetFolderSensitive } from '@/hooks/use-dms';
 import { canDeleteFolder } from '@/lib/dms';
 import { useDmsStore } from '@/store/dms-store';
 import { cn } from '@/lib/utils';
@@ -90,9 +91,33 @@ function FolderCard({
   const setUploadModalOpen = useDmsStore((s) => s.setUploadModalOpen);
   const setPendingDropFiles = useDmsStore((s) => s.setPendingDropFiles);
   const setActiveFolderId = useDmsStore((s) => s.setActiveFolderId);
+  const setFolderSensitive = useSetFolderSensitive();
 
   const [isDragOver, setIsDragOver] = React.useState(false);
+  const [requestOpen, setRequestOpen] = React.useState(false);
   const canUpload = profile?.canUpload ?? false;
+  const locked = Boolean(folder.locked);
+  const canManageSensitive =
+    Boolean(profile) &&
+    (profile!.isAdmin || folder.createdById === profile!.id || !folder.createdById);
+
+  function handleCardClick(e: React.MouseEvent) {
+    if (locked) {
+      e.preventDefault();
+      setRequestOpen(true);
+    }
+  }
+
+  async function toggleSensitive(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await setFolderSensitive.mutateAsync({ id: folder.id, isSensitive: !folder.isSensitive });
+      toast.success(folder.isSensitive ? 'Folder unmarked' : 'Folder marked sensitive');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update folder');
+    }
+  }
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
@@ -117,6 +142,11 @@ function FolderCard({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+
+    if (locked) {
+      toast.error('This folder is restricted. Request access to upload here.');
+      return;
+    }
 
     if (!canUpload) {
       toast.error('You do not have upload access.');
@@ -160,15 +190,27 @@ function FolderCard({
           : 'hover:border-primary/50 hover:bg-brand-subtle'
       )}
     >
-      <Link href={`/folders/${folder.id}`} className="flex items-center gap-3 p-3 pr-11">
+      <Link
+        href={`/folders/${folder.id}`}
+        onClick={handleCardClick}
+        className="flex items-center gap-3 p-3 pr-11"
+      >
         <div className={cn(
           'flex size-10 items-center justify-center rounded-md bg-muted text-primary transition duration-200',
           isDragOver && 'bg-primary text-primary-foreground'
         )}>
-          <Folder className="size-5" />
+          {locked ? <Lock className="size-5 text-red-600" /> : <Folder className="size-5" />}
         </div>
         <div className="min-w-0">
-          <p className="truncate uppercase font-bold text-foreground">{folder.name}</p>
+          <p className="truncate uppercase font-bold text-foreground flex items-center gap-1.5">
+            {folder.name}
+            {folder.isSensitive && (
+              <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
+                <Lock className="size-2.5" />
+                {locked ? 'Locked' : 'Sensitive'}
+              </span>
+            )}
+          </p>
           {folder._count && (
             <small>
               {folder._count.documents} docs · {folder._count.children} folders
@@ -177,29 +219,58 @@ function FolderCard({
         </div>
       </Link>
 
-      {canDelete && (
-        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+        {canManageSensitive && (
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={`Move ${folder.name}`}
-            onClick={() => onMove(folder)}
+            aria-label={folder.isSensitive ? `Unmark ${folder.name} as sensitive` : `Mark ${folder.name} as sensitive`}
+            disabled={setFolderSensitive.isPending}
+            onClick={toggleSensitive}
           >
-            <FolderInput className="size-4" />
+            {folder.isSensitive ? (
+              <LockOpen className="size-4 text-red-600" />
+            ) : (
+              <Lock className="size-4" />
+            )}
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${folder.name}`}
-            disabled={deleteFolderPending}
-            onClick={() => onDelete(folder)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
-      )}
+        )}
+        {canDelete && (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Move ${folder.name}`}
+              onClick={() => onMove(folder)}
+            >
+              <FolderInput className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Delete ${folder.name}`}
+              disabled={deleteFolderPending}
+              onClick={() => onDelete(folder)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </>
+        )}
+      </div>
+
+      <RequestAccessModal
+        target={{
+          kind: 'FOLDER',
+          id: folder.lockTargetId ?? folder.id,
+          name: folder.lockTargetName ?? folder.name,
+          ownerName: folder.lockOwnerName,
+        }}
+        open={requestOpen}
+        onOpenChange={setRequestOpen}
+      />
     </div>
   );
 }

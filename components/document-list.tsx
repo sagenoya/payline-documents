@@ -104,7 +104,7 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
         <div className="min-w-0 flex-1">
           <p className="font-medium text-foreground break-words leading-snug" title={document.title}>
             {document.title}
-            {document.isSensitive && (
+            {(document.isSensitive || document.locked) && (
               <span className="inline-flex items-center gap-1 align-middle ml-2 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
                 <Lock className="size-2.5" />
                 {document.locked ? 'Locked' : 'Sensitive'}

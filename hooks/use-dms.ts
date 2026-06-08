@@ -343,6 +343,26 @@ export function useRequestDocumentAccess() {
   });
 }
 
+export function useRequestFolderAccess() {
+  return useMutation({
+    mutationFn: (folderId: string) => $api.dms.requestFolderAccess(folderId),
+  });
+}
+
+export function useSetFolderSensitive() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, isSensitive }: { id: string; isSensitive: boolean }) =>
+      $api.dms.setFolderSensitive(id, isSensitive),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+    },
+  });
+}
+
 export function useTrustedViewers() {
   return useQuery({
     queryKey: dmsKeys.trustedViewers,

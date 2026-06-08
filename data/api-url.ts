@@ -31,6 +31,7 @@ export const API_URLS = {
     activity: '/api/activity',
     uploadthing: '/api/uploadthing',
     documentAccessRequest: (documentId: string) => `/api/documents/${documentId}/access-request`,
+    folderAccessRequest: (folderId: string) => `/api/folders/${folderId}/access-request`,
     trustedViewers: '/api/settings/trusted-viewers',
     notifications: '/api/notifications',
     notificationsCount: '/api/notifications/count',
