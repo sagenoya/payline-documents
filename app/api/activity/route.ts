@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { canViewActivity } from '@/server/access-control';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { withDbTimeout } from '@/server/db';
 
@@ -11,7 +12,11 @@ const activityFilters = {
 
 export async function GET(request: Request) {
   try {
-    await requireClerkUser();
+    const user = await requireClerkUser();
+
+    if (!canViewActivity(user.email)) {
+      return jsonError('You do not have permission to view activity.', 403);
+    }
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get('page') || 1));

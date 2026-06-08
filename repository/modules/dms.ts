@@ -11,6 +11,7 @@ import type {
   DocumentSortBy,
   FolderDetail,
   FolderSummary,
+  NotificationsResponse,
   Paginated,
   SortDirection,
   UserOption,
@@ -125,5 +126,33 @@ export class DmsModule extends FetchFactory {
 
   bulkMoveDocuments(documentIds: string[], folderId: string | null): Promise<ApiResponse<{ movedCount: number, failedCount: number }>> {
     return this.call('POST', API_URLS.dms.bulkMove, { body: { documentIds, folderId } });
+  }
+
+  requestDocumentAccess(documentId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.call('POST', API_URLS.dms.documentAccessRequest(documentId));
+  }
+
+  getTrustedViewers(): Promise<ApiResponse<{ viewerIds: string[] }>> {
+    return this.call('GET', API_URLS.dms.trustedViewers);
+  }
+
+  saveTrustedViewers(viewerIds: string[]): Promise<ApiResponse<{ viewerIds: string[] }>> {
+    return this.call('PUT', API_URLS.dms.trustedViewers, { body: { viewerIds } });
+  }
+
+  getNotifications(): Promise<ApiResponse<NotificationsResponse>> {
+    return this.call('GET', API_URLS.dms.notifications);
+  }
+
+  getNotificationCount(): Promise<ApiResponse<{ unreadCount: number }>> {
+    return this.call('GET', API_URLS.dms.notificationsCount);
+  }
+
+  markNotificationsRead(): Promise<ApiResponse<{ success: boolean }>> {
+    return this.call('PATCH', API_URLS.dms.notifications);
+  }
+
+  respondToAccessRequest(id: string, decision: 'APPROVE' | 'DENY'): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.call('POST', API_URLS.dms.accessRequestRespond(id), { body: { decision } });
   }
 }

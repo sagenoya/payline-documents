@@ -57,8 +57,9 @@ export const categoryLabels: Record<DocumentCategory, string> = {
   ENGINEERING: 'Engineering',
 };
 
-export function canUpload(role?: CompanyRole | null) {
-  return Boolean(role && UPLOAD_ALLOWED_ROLES.has(role));
+export function canUpload(_role?: CompanyRole | null) {
+  // Every onboarded user can upload documents and create folders.
+  return true;
 }
 
 export function canDeleteDocument(params: {

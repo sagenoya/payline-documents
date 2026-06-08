@@ -5,11 +5,12 @@ import { canUpload } from '@/lib/dms';
 import { documentCreateSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
+import { maskSensitiveDocuments } from '@/server/document-access';
 import { withDbTimeout } from '@/server/db';
 
 export async function GET(request: Request) {
   try {
-    await requireClerkUser();
+    const user = await requireClerkUser();
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim();
@@ -66,8 +67,13 @@ export async function GET(request: Request) {
 
     const totalPages = Math.ceil(total / limit);
 
+    const maskedDocuments = await maskSensitiveDocuments(documents, {
+      id: user.id,
+      email: user.email,
+    });
+
     return jsonOk({
-      data: documents,
+      data: maskedDocuments,
       meta: {
         total,
         page,

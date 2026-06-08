@@ -23,6 +23,7 @@ export type Profile = {
 export type CurrentProfile = BasicUser & {
   profile?: Profile | null;
   canUpload: boolean;
+  canViewActivity: boolean;
   onboarded: boolean;
 };
 
@@ -43,6 +44,8 @@ export type DocumentSummary = {
   title: string;
   description?: string | null;
   category: DocumentCategory;
+  isSensitive: boolean;
+  locked?: boolean;
   fileUrl: string;
   fileKey: string;
   mimeType: string;
@@ -85,6 +88,31 @@ export type CreateDocumentInput = {
   mimeType: string;
   size: number;
   folderId?: string | null;
+  isSensitive?: boolean;
+};
+
+export type AccessRequestStatus = 'PENDING' | 'APPROVED' | 'DENIED';
+
+export type NotificationType = 'ACCESS_REQUEST' | 'ACCESS_GRANTED' | 'ACCESS_DENIED';
+
+export type NotificationItem = {
+  id: string;
+  type: NotificationType;
+  read: boolean;
+  accessRequestId?: string | null;
+  createdAt: DateLike;
+  accessRequest?: {
+    id: string;
+    status: AccessRequestStatus;
+    expiresAt?: DateLike | null;
+    requester: BasicUser;
+    document: Pick<DocumentSummary, 'id' | 'title'>;
+  } | null;
+};
+
+export type NotificationsResponse = {
+  notifications: NotificationItem[];
+  unreadCount: number;
 };
 
 export type CreateFolderInput = {

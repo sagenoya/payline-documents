@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, CheckCircle2, UploadCloud, X } from 'lucide-react';
+import { Loader2, CheckCircle2, Lock, UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ export function UploadDocumentModal() {
     description: '',
     category: 'OPERATIONS' as DocumentCategory,
     folderId: activeFolderId || '',
+    isSensitive: false,
   });
 
   // Keep form in sync when activeFolderId changes
@@ -110,7 +111,7 @@ export function UploadDocumentModal() {
   function reset() {
     setUploadedFiles([]);
     setUploadProgress(0);
-    setForm({ title: '', description: '', category: 'OPERATIONS', folderId: activeFolderId || '' });
+    setForm({ title: '', description: '', category: 'OPERATIONS', folderId: activeFolderId || '', isSensitive: false });
     setFolderName('');
     setCreatingParentId(undefined);
   }
@@ -145,6 +146,7 @@ export function UploadDocumentModal() {
             fileKey: file.key,
             mimeType: file.type || 'application/octet-stream',
             size: file.size,
+            isSensitive: form.isSensitive,
           })
         )
       );
@@ -383,6 +385,28 @@ export function UploadDocumentModal() {
             </div>
           )}
         </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/20 p-4">
+          <input
+            type="checkbox"
+            checked={form.isSensitive}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, isSensitive: event.target.checked }))
+            }
+            className="mt-0.5 size-4 accent-red-600"
+          />
+          <span className="space-y-0.5">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Lock className="size-3.5 text-red-600" />
+              Mark as sensitive
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              The document stays visible to everyone but stays locked. Teammates must request
+              access from you, and only people on your{' '}
+              <a href="/settings" className="underline hover:text-foreground">trusted list</a> can open it without asking.
+            </span>
+          </span>
+        </label>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>

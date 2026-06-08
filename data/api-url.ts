@@ -30,5 +30,10 @@ export const API_URLS = {
     bulkMove: '/api/documents/bulk/move',
     activity: '/api/activity',
     uploadthing: '/api/uploadthing',
+    documentAccessRequest: (documentId: string) => `/api/documents/${documentId}/access-request`,
+    trustedViewers: '/api/settings/trusted-viewers',
+    notifications: '/api/notifications',
+    notificationsCount: '/api/notifications/count',
+    accessRequestRespond: (id: string) => `/api/access-requests/${id}/respond`,
   },
 } as const;

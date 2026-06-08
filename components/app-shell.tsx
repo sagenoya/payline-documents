@@ -4,9 +4,10 @@ import * as React from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Activity, Files, FolderOpen, LayoutDashboard, Plus } from 'lucide-react';
+import { Activity, Files, FolderOpen, LayoutDashboard, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
+import { NotificationsBell } from '@/components/notifications-bell';
 import { useProfile } from '@/hooks/use-dms';
 import { cn } from '@/lib/utils';
 import { useDmsStore } from '@/store/dms-store';
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/folders', label: 'Folders', icon: FolderOpen },
   { href: '/documents', label: 'Documents', icon: Files },
   { href: '/activity', label: 'Activity', icon: Activity },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -94,6 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Upload
               </Button>
             )}
+            <NotificationsBell />
             <UserMenu profile={profile} />
           </div>
         </header>
@@ -101,7 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto w-full max-w-7xl px-4 py-6 pb-20 lg:pb-6">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-background lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background lg:hidden">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname.startsWith(item.href);

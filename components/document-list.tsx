@@ -1,4 +1,4 @@
-import { FileImage, FileSpreadsheet, FileText, FileType, UploadCloud } from 'lucide-react';
+import { FileImage, FileSpreadsheet, FileText, FileType, Lock, UploadCloud } from 'lucide-react';
 import { DocumentActions } from '@/components/document-actions';
 import { BulkActionsBar } from '@/components/bulk-actions-bar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -104,6 +104,12 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
         <div className="min-w-0 flex-1">
           <p className="font-medium text-foreground break-words leading-snug" title={document.title}>
             {document.title}
+            {document.isSensitive && (
+              <span className="inline-flex items-center gap-1 align-middle ml-2 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
+                <Lock className="size-2.5" />
+                {document.locked ? 'Locked' : 'Sensitive'}
+              </span>
+            )}
             {new Date(document.updatedAt).getTime() - new Date(document.createdAt).getTime() > 1000 && (
               <span className="inline-block align-middle ml-2 shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Edited</span>
             )}

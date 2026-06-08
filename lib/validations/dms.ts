@@ -19,6 +19,15 @@ export const documentCreateSchema = z.object({
   mimeType: z.string().min(1, 'MIME type is required'),
   size: z.number().int().positive('File size is required'),
   folderId: z.string().optional().nullable(),
+  isSensitive: z.boolean().optional(),
+});
+
+export const trustedViewersSchema = z.object({
+  viewerIds: z.array(z.string()).max(50),
+});
+
+export const accessResponseSchema = z.object({
+  decision: z.enum(['APPROVE', 'DENY']),
 });
 
 export const documentAccessSchema = z.object({

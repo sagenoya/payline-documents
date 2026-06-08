@@ -37,6 +37,18 @@ enum ActivityAction {
   DELETE_FOLDER
 }
 
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum NotificationType {
+  ACCESS_REQUEST
+  ACCESS_GRANTED
+  ACCESS_DENIED
+}
+
 model User {
   id               String              @id @default(cuid())
   clerkUserId      String              @unique
@@ -48,8 +60,61 @@ model User {
   documents        Document[]          @relation("UploadedDocuments")
   documentVersions DocumentVersion[]
   activityLogs     ActivityLog[]
+  trustedViewers   TrustedViewer[]     @relation("TrustedViewerOwner")
+  trustedByOwners  TrustedViewer[]     @relation("TrustedViewerViewer")
+  accessRequestsMade     AccessRequest[] @relation("AccessRequester")
+  accessRequestsReceived AccessRequest[] @relation("AccessOwner")
+  notifications    Notification[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
+}
+
+model TrustedViewer {
+  id        String   @id @default(cuid())
+  ownerId   String
+  viewerId  String
+  owner     User     @relation("TrustedViewerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  viewer    User     @relation("TrustedViewerViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([ownerId, viewerId])
+  @@index([ownerId])
+  @@index([viewerId])
+}
+
+model AccessRequest {
+  id          String              @id @default(cuid())
+  documentId  String
+  requesterId String
+  ownerId     String
+  status      AccessRequestStatus @default(PENDING)
+  expiresAt   DateTime?
+  document    Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  requester   User                @relation("AccessRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  owner       User                @relation("AccessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([documentId])
+  @@index([requesterId])
+  @@index([ownerId])
+  @@index([requesterId, documentId, status])
+}
+
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  type            NotificationType
+  accessRequestId String?
+  read            Boolean          @default(false)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessRequest   AccessRequest?   @relation(fields: [accessRequestId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
 }
 
 model Profile {
@@ -82,6 +147,7 @@ model Document {
   title          String
   description    String?
   category       DocumentCategory
+  isSensitive    Boolean             @default(false)
   version        Int                 @default(1)
   fileUrl        String
   fileKey        String
@@ -93,6 +159,7 @@ model Document {
   folder         Folder?             @relation(fields: [folderId], references: [id], onDelete: SetNull)
   activityLogs   ActivityLog[]
   versions       DocumentVersion[]
+  accessRequests AccessRequest[]
   lastAccessedAt DateTime?
   deletedAt      DateTime?
   deletedById    String?

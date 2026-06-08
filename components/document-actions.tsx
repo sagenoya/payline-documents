@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Copy, Download, Eye, FolderOpen, History, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Download, Eye, FolderOpen, History, Lock, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { DocumentVersionsModal } from '@/components/document-versions-modal';
+import { RequestAccessModal } from '@/components/request-access-modal';
 import { useDeleteDocument, useLogDocumentAccess, useProfile, useRestoreDocument } from '@/hooks/use-dms';
 import { canDeleteDocument } from '@/lib/dms';
 import { useDmsStore } from '@/store/dms-store';
@@ -21,6 +22,26 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
   const setEditingDocument = useDmsStore((s) => s.setEditingDocument);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [requestOpen, setRequestOpen] = React.useState(false);
+
+  if (document.locked) {
+    return (
+      <>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => setRequestOpen(true)}
+          >
+            <Lock className="size-3.5 text-red-600" />
+            Request access
+          </Button>
+        </div>
+        <RequestAccessModal document={document} open={requestOpen} onOpenChange={setRequestOpen} />
+      </>
+    );
+  }
 
   const canEdit = user?.id === document.uploadedById || user?.profile?.companyRole === 'CEO';
   const canDelete =

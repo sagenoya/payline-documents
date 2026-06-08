@@ -1,6 +1,7 @@
 import type { CompanyRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { canUpload } from '@/lib/dms';
+import { canViewActivity } from '@/server/access-control';
 import { onboardingSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { withDbTimeout } from '@/server/db';
@@ -12,6 +13,7 @@ export async function GET() {
     return jsonOk({
       ...user,
       canUpload: canUpload(user.profile?.companyRole),
+      canViewActivity: canViewActivity(user.email),
     });
   } catch (error) {
     console.error('Profile lookup failed', error);

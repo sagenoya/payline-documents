@@ -19,6 +19,9 @@ export const dmsKeys = {
   folder: (folderId: string) => ['dms', 'folder', folderId] as const,
   documents: (query?: Record<string, unknown>) => ['dms', 'documents', query ?? {}] as const,
   activity: ['dms', 'activity'] as const,
+  trustedViewers: ['dms', 'trustedViewers'] as const,
+  notifications: ['dms', 'notifications'] as const,
+  notificationCount: ['dms', 'notificationCount'] as const,
 };
 
 export function useDashboard() {
@@ -330,6 +333,116 @@ export function useBulkMoveDocuments() {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
       queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
+    },
+  });
+}
+
+export function useRequestDocumentAccess() {
+  return useMutation({
+    mutationFn: (documentId: string) => $api.dms.requestDocumentAccess(documentId),
+  });
+}
+
+export function useTrustedViewers() {
+  return useQuery({
+    queryKey: dmsKeys.trustedViewers,
+    queryFn: async () => (await $api.dms.getTrustedViewers()).data,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSaveTrustedViewers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (viewerIds: string[]) => $api.dms.saveTrustedViewers(viewerIds),
+    onSuccess: (response) => {
+      queryClient.setQueryData(dmsKeys.trustedViewers, response.data);
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+    },
+  });
+}
+
+// Cheap, frequently-polled unread badge. Paused automatically when the tab is
+// not focused (refetchIntervalInBackground defaults to false).
+export function useNotificationCount() {
+  return useQuery({
+    queryKey: dmsKeys.notificationCount,
+    queryFn: async () => (await $api.dms.getNotificationCount()).data,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+// Full notification payload — only fetched on demand (when the bell is opened).
+export function useNotifications(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: dmsKeys.notifications,
+    queryFn: async () => (await $api.dms.getNotifications()).data,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useMarkNotificationsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => $api.dms.markNotificationsRead(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: dmsKeys.notifications });
+      const previous = queryClient.getQueryData(dmsKeys.notifications);
+      queryClient.setQueryData(dmsKeys.notifications, (old: any) =>
+        old
+          ? {
+              ...old,
+              unreadCount: 0,
+              notifications: old.notifications.map((n: any) => ({ ...n, read: true })),
+            }
+          : old,
+      );
+      queryClient.setQueryData(dmsKeys.notificationCount, { unreadCount: 0 });
+      return { previous };
+    },
+    onError: (_e, _v, context) => {
+      if (context?.previous) queryClient.setQueryData(dmsKeys.notifications, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: dmsKeys.notifications });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.notificationCount });
+    },
+  });
+}
+
+export function useRespondToAccessRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: 'APPROVE' | 'DENY' }) =>
+      $api.dms.respondToAccessRequest(id, decision),
+    onMutate: async ({ id, decision }) => {
+      await queryClient.cancelQueries({ queryKey: dmsKeys.notifications });
+      const previous = queryClient.getQueryData(dmsKeys.notifications);
+      queryClient.setQueryData(dmsKeys.notifications, (old: any) =>
+        old
+          ? {
+              ...old,
+              notifications: old.notifications.map((n: any) =>
+                n.accessRequest?.id === id
+                  ? { ...n, read: true, accessRequest: { ...n.accessRequest, status: decision === 'APPROVE' ? 'APPROVED' : 'DENIED' } }
+                  : n,
+              ),
+            }
+          : old,
+      );
+      return { previous };
+    },
+    onError: (_e, _v, context) => {
+      if (context?.previous) queryClient.setQueryData(dmsKeys.notifications, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: dmsKeys.notifications });
+      queryClient.invalidateQueries({ queryKey: dmsKeys.notificationCount });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
     },
   });
 }
