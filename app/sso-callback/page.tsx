@@ -12,7 +12,7 @@ export default function SsoCallbackPage() {
           </div>
           <div>
             <p className="text-lg font-semibold text-foreground">Signing you in…</p>
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            <p className="mt-3 max-w-sm text-sm text-muted-foreground">
               One moment while we verify your account.
             </p>
           </div>
