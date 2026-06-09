@@ -73,8 +73,10 @@ export class FetchFactory {
           responseData?.message ||
           `Request failed with status ${response.status}`;
 
-        // Global 401/403 Handling
-        if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined' && !window.__isRedirecting) {
+        // Global 401 handling — only an authentication failure forces a re-login.
+        // A 403 means the user IS signed in but lacks permission (e.g. deleting
+        // someone else's document); surface it as an error toast, do NOT redirect.
+        if (response.status === 401 && typeof window !== 'undefined' && !window.__isRedirecting) {
             window.__isRedirecting = true;
             const bypassPaths = ['/sign-in', '/sign-up'];
             const isBypassPath = bypassPaths.some(p => window.location.pathname.startsWith(p));

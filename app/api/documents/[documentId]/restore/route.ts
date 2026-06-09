@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { canDeleteDocument } from '@/lib/dms';
+import { isAdmin } from '@/server/access-control';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 
 export async function POST(
@@ -18,14 +18,8 @@ export async function POST(
     return jsonError('Document not found', 404);
   }
 
-  if (
-    !canDeleteDocument({
-      userId: user.id,
-      uploadedById: document.uploadedById,
-      role: user.profile?.companyRole,
-    })
-  ) {
-    return jsonError('Only the uploader or a Frontend Developer can restore this document.', 403);
+  if (document.uploadedById !== user.id && !isAdmin(user.email)) {
+    return jsonError('Only the uploader or an admin can restore this document.', 403);
   }
 
   const restored = await prisma.document.update({

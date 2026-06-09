@@ -9,7 +9,6 @@ import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { DocumentVersionsModal } from '@/components/document-versions-modal';
 import { RequestAccessModal } from '@/components/request-access-modal';
 import { useDeleteDocument, useLogDocumentAccess, useProfile, useRestoreDocument } from '@/hooks/use-dms';
-import { canDeleteDocument } from '@/lib/dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
 import { toast } from 'sonner';
@@ -49,20 +48,10 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
     );
   }
 
-  const isUploader = user?.id === document.uploadedById;
-  // Sensitive documents restrict edit/move/delete to the uploader or an admin —
-  // not other roles and not people merely granted view access.
-  const canEdit = document.isSensitive
-    ? Boolean(isUploader || user?.isAdmin)
-    : Boolean(isUploader || user?.profile?.companyRole === 'CEO');
-  const canDelete = document.isSensitive
-    ? Boolean(isUploader || user?.isAdmin)
-    : !!user &&
-      canDeleteDocument({
-        userId: user.id,
-        uploadedById: document.uploadedById,
-        role: user.profile?.companyRole,
-      });
+  // Edit/move/delete is restricted to the uploader or an admin for every
+  // document — roles are self-selected and therefore not trusted.
+  const canEdit = Boolean(user && (user.id === document.uploadedById || user.isAdmin));
+  const canDelete = canEdit;
 
   async function downloadBlob() {
     try {

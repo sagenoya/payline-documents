@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { canDeleteDocument } from '@/lib/dms';
 import { isAdmin } from '@/server/access-control';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { logActivity } from '@/server/activity';
@@ -70,19 +69,10 @@ export async function PATCH(
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid update data', 422);
   }
 
-  const isUploader = document.uploadedById === user.id;
-  const admin = isAdmin(user.email);
-  const togglingSensitivity =
-    parsed.data.isSensitive !== undefined && parsed.data.isSensitive !== document.isSensitive;
-
-  // Sensitive documents — and toggling sensitivity itself — are restricted to the
-  // uploader or an admin (not other roles or people merely granted view access).
-  if (document.isSensitive || togglingSensitivity) {
-    if (!isUploader && !admin) {
-      return jsonError('Only the uploader or an admin can edit a sensitive document.', 403);
-    }
-  } else if (!isUploader && user.profile?.companyRole !== 'CEO') {
-    return jsonError('Only the original uploader or CEO can edit this document', 403);
+  // Editing, moving, replacing a file, or toggling sensitivity is restricted to
+  // the uploader or an admin — roles are self-selected, so they are not trusted.
+  if (document.uploadedById !== user.id && !isAdmin(user.email)) {
+    return jsonError('Only the uploader or an admin can edit this document.', 403);
   }
 
   const isMoving =
@@ -137,26 +127,16 @@ export async function DELETE(
 
   const document = await prisma.document.findFirst({
     where: { id: documentId, deletedAt: null },
-    select: { id: true, title: true, uploadedById: true, isSensitive: true },
+    select: { id: true, title: true, uploadedById: true },
   });
 
   if (!document) {
     return jsonError('Document not found', 404);
   }
 
-  if (document.isSensitive) {
-    // Sensitive documents can only be deleted by their uploader or an admin.
-    if (document.uploadedById !== user.id && !isAdmin(user.email)) {
-      return jsonError('Only the uploader or an admin can delete a sensitive document.', 403);
-    }
-  } else if (
-    !canDeleteDocument({
-      userId: user.id,
-      uploadedById: document.uploadedById,
-      role: user.profile?.companyRole,
-    })
-  ) {
-    return jsonError('Only the uploader or a Frontend Developer can delete this document.', 403);
+  // Only the uploader or an admin can delete a document (any document).
+  if (document.uploadedById !== user.id && !isAdmin(user.email)) {
+    return jsonError('Only the uploader or an admin can delete this document.', 403);
   }
 
   await prisma.$transaction([

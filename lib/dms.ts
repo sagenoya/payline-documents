@@ -56,14 +56,6 @@ export function canUpload(_role?: CompanyRole | null) {
   return true;
 }
 
-export function canDeleteDocument(params: {
-  userId: string;
-  uploadedById: string;
-  role?: CompanyRole | null;
-}) {
-  return params.userId === params.uploadedById || params.role === 'FRONTEND_DEVELOPER';
-}
-
 export function canDeleteFolder(role?: CompanyRole | null) {
   return role === 'FRONTEND_DEVELOPER';
 }

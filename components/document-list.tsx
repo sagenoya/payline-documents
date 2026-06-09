@@ -75,7 +75,11 @@ export function DocumentList({
     );
   }
 
-  const allSelected = documents.length > 0 && documents.every((doc) => selectedDocumentIds.includes(doc.id));
+  // Locked documents have no checkbox, so they're excluded from Select All.
+  const selectableDocuments = documents.filter((doc) => !doc.locked);
+  const allSelected =
+    selectableDocuments.length > 0 &&
+    selectableDocuments.every((doc) => selectedDocumentIds.includes(doc.id));
 
   return (
     <>
@@ -85,10 +89,10 @@ export function DocumentList({
             checked={allSelected}
             onCheckedChange={(checked) => {
               if (checked) {
-                selectAllDocuments(Array.from(new Set([...selectedDocumentIds, ...documents.map((d) => d.id)])));
+                selectAllDocuments(Array.from(new Set([...selectedDocumentIds, ...selectableDocuments.map((d) => d.id)])));
               } else {
                 const remainingIds = selectedDocumentIds.filter(
-                  (id) => !documents.some((doc) => doc.id === id),
+                  (id) => !selectableDocuments.some((doc) => doc.id === id),
                 );
                 selectAllDocuments(remainingIds);
               }

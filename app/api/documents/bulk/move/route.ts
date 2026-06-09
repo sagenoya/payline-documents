@@ -30,19 +30,17 @@ export async function POST(request: Request) {
 
   const documents = await prisma.document.findMany({
     where: { id: { in: documentIds }, deletedAt: null },
-    select: { id: true, title: true, uploadedById: true, isSensitive: true },
+    select: { id: true, title: true, uploadedById: true },
   });
 
   if (!documents.length) {
     return jsonError('No documents found to move', 404);
   }
 
-  // Sensitive docs: only uploader/admin. Others: uploader or CEO.
+  // Only the uploader or an admin can move a document.
   const admin = isAdmin(user.email);
-  const authorizedDocs = documents.filter((doc) =>
-    doc.isSensitive
-      ? doc.uploadedById === user.id || admin
-      : doc.uploadedById === user.id || user.profile?.companyRole === 'CEO',
+  const authorizedDocs = documents.filter(
+    (doc) => doc.uploadedById === user.id || admin,
   );
 
   if (!authorizedDocs.length) {

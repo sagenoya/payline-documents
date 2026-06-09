@@ -25,12 +25,12 @@ export function BulkActionsBar({ documents }: { documents: DocumentSummary[] }) 
 
   const count = selectedDocumentIds.length;
 
-  // Hide move/delete if any selected document is a sensitive one the user doesn't
-  // own (and isn't an admin) — those actions are uploader/admin-only.
+  // Move/delete are uploader-or-admin only — hide them unless the user owns every
+  // selected document (or is an admin).
   const selectedDocs = documents.filter((d) => selectedDocumentIds.includes(d.id));
-  const canMutateSelection = selectedDocs.every(
-    (d) => !d.isSensitive || d.uploadedById === profile?.id || profile?.isAdmin,
-  );
+  const canMutateSelection =
+    selectedDocs.length > 0 &&
+    selectedDocs.every((d) => d.uploadedById === profile?.id || profile?.isAdmin);
 
   if (count === 0) return null;
 
