@@ -16,7 +16,10 @@ import type { NotificationItem } from '@/types/dms';
 
 function notificationText(n: NotificationItem) {
   const ar = n.accessRequest;
-  const target = ar?.folder ? `the folder “${ar.folder.name}”` : `“${ar?.document?.title ?? 'a document'}”`;
+  const docFolder = ar?.document?.folder?.name ? ` (in “${ar.document.folder.name}”)` : '';
+  const target = ar?.folder
+    ? `the folder “${ar.folder.name}”`
+    : `“${ar?.document?.title ?? 'a document'}”${docFolder}`;
   const who = ar?.requester.name ?? 'A teammate';
   if (n.type === 'ACCESS_REQUEST') return `${who} requested access to ${target}.`;
   if (n.type === 'ACCESS_GRANTED') return `Your access to ${target} was approved for 2 hours.`;
@@ -83,7 +86,7 @@ export function NotificationsBell() {
             <p className="text-sm font-semibold">Notifications</p>
           </div>
 
-          <div className="max-h-96 overflow-y-auto divide-y">
+          <div className="max-h-96 overflow-y-auto overscroll-contain scroll-smooth divide-y">
             {isLoading ? (
               <div className="flex items-center justify-center px-4 py-8 text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />

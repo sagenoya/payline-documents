@@ -97,6 +97,9 @@ export function RecentActivity({
                   <span className="font-medium">{item.user.name}</span>{' '}
                   {actionText}{' '}
                   <span className="font-medium">{targetName}</span>
+                  {item.document?.folder?.name && (
+                    <span className="text-muted-foreground"> in {item.document.folder.name}</span>
+                  )}
                 </p>
                 <small>{formatDateTime(item.timestamp)}</small>
               </div>

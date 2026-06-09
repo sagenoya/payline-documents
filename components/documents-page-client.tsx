@@ -6,9 +6,8 @@ import { DocumentList } from '@/components/document-list';
 import { PaginationControls } from '@/components/pagination-controls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useDocumentsPage, useUsers } from '@/hooks/use-dms';
+import { useCategories, useDocumentsPage, useUsers } from '@/hooks/use-dms';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { DOCUMENT_CATEGORIES, categoryLabels } from '@/lib/dms';
 import type { DocumentSortBy, SortDirection } from '@/types/dms';
 
 import { Loader } from '@/components/ui/loader';
@@ -22,6 +21,7 @@ export function DocumentsPageClient() {
   const [page, setPage] = React.useState(1);
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const { data: users = [] } = useUsers();
+  const { data: categories = [] } = useCategories();
   const { data, isLoading, isFetching } = useDocumentsPage({
     search: debouncedSearch || undefined,
     category: category || undefined,
@@ -70,9 +70,9 @@ export function DocumentsPageClient() {
           className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
         >
           <option value="">All categories</option>
-          {DOCUMENT_CATEGORIES.map((item) => (
-            <option key={item} value={item}>
-              {categoryLabels[item]}
+          {categories.map((item) => (
+            <option key={item.id} value={item.name}>
+              {item.name}
             </option>
           ))}
         </select>

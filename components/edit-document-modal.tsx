@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, CheckCircle2, UploadCloud } from 'lucide-react';
+import { Loader2, CheckCircle2, Lock, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,7 @@ import { Input } from '@/components/ui/input';
 import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
 import { useDmsStore } from '@/store/dms-store';
-import { useUpdateDocument, useAllFolders } from '@/hooks/use-dms';
-import { categoryLabels, DOCUMENT_CATEGORIES } from '@/lib/dms';
-import type { DocumentCategory } from '@prisma/client';
+import { useCategories, useProfile, useUpdateDocument, useAllFolders } from '@/hooks/use-dms';
 
 type UploadedFile = {
   url: string;
@@ -25,12 +23,18 @@ export function EditDocumentModal() {
   const { editingDocument, setEditingDocument } = useDmsStore();
   const isOpen = !!editingDocument;
   const { data: allFolders = [] } = useAllFolders({ enabled: isOpen });
+  const { data: categories = [] } = useCategories({ enabled: isOpen });
+  const { data: profile } = useProfile();
   const updateDocument = useUpdateDocument();
+  const canToggleSensitive = Boolean(
+    profile && (profile.isAdmin || editingDocument?.uploadedById === profile.id),
+  );
 
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
-  const [category, setCategory] = React.useState<DocumentCategory>('HR');
+  const [category, setCategory] = React.useState('');
   const [folderId, setFolderId] = React.useState<string | null>(null);
+  const [isSensitive, setIsSensitive] = React.useState(false);
   const [uploadedFile, setUploadedFile] = React.useState<UploadedFile | null>(null);
 
   React.useEffect(() => {
@@ -39,6 +43,7 @@ export function EditDocumentModal() {
       setDescription(editingDocument.description || '');
       setCategory(editingDocument.category);
       setFolderId(editingDocument.folderId || null);
+      setIsSensitive(Boolean(editingDocument.isSensitive));
       setUploadedFile(null); // Reset when a new document is selected
     }
   }, [editingDocument]);
@@ -73,6 +78,7 @@ export function EditDocumentModal() {
           description: description || null,
           category,
           folderId,
+          isSensitive,
           ...(uploadedFile && {
             fileUrl: uploadedFile.url,
             fileKey: uploadedFile.key,
@@ -124,15 +130,19 @@ export function EditDocumentModal() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="edit-category" className="mb-1.5 block text-sm font-medium">Category</label>
-            <select 
+            <select
               id="edit-category"
-              value={category} 
-              onChange={(e) => setCategory(e.target.value as DocumentCategory)}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
             >
-              {DOCUMENT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {categoryLabels[cat]}
+              {/* Preserve the document's current category even if it was renamed/removed from the catalog */}
+              {category && !categories.some((c) => c.name === category) && (
+                <option value={category}>{category}</option>
+              )}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.name}
                 </option>
               ))}
             </select>
@@ -147,6 +157,26 @@ export function EditDocumentModal() {
               />
           </div>
         </div>
+
+        <label className={`flex items-start gap-3 rounded-lg border bg-muted/20 p-4 ${canToggleSensitive ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+          <input
+            type="checkbox"
+            checked={isSensitive}
+            disabled={!canToggleSensitive}
+            onChange={(e) => setIsSensitive(e.target.checked)}
+            className="mt-0.5 size-4 accent-red-600"
+          />
+          <span className="space-y-0.5">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Lock className="size-3.5 text-red-600" />
+              Mark as sensitive
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              When on, teammates must request access; only people on your trusted list can open it
+              without asking. Uncheck to make it openable by everyone again.
+            </span>
+          </span>
+        </label>
 
         <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center transition-colors">
           {uploadedFile ? (

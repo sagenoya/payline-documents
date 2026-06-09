@@ -1,4 +1,3 @@
-import type { DocumentCategory } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { canUpload } from '@/lib/dms';
@@ -14,7 +13,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim();
-    const category = searchParams.get('category') as DocumentCategory | null;
+    const category = searchParams.get('category');
     const folderId = searchParams.get('folderId');
     const uploadedById = searchParams.get('uploadedById');
     const recent = searchParams.get('recent') === 'true';
@@ -109,7 +108,7 @@ export async function POST(request: Request) {
         ...parsed.data,
         description: parsed.data.description || null,
         folderId: parsed.data.folderId || null,
-        category: parsed.data.category as DocumentCategory,
+        category: parsed.data.category,
         uploadedById: user.id,
       },
       include: {

@@ -1,6 +1,7 @@
 import { API_URLS } from '@/data/api-url';
 import type { ApiResponse } from '@/types/api';
 import type {
+  Category,
   CreateDocumentInput,
   CreateFolderInput,
   CurrentProfile,
@@ -29,6 +30,22 @@ export class DmsModule extends FetchFactory {
 
   getUsers(): Promise<ApiResponse<UserOption[]>> {
     return this.call('GET', API_URLS.dms.users);
+  }
+
+  getCategories(): Promise<ApiResponse<Category[]>> {
+    return this.call('GET', API_URLS.dms.categories);
+  }
+
+  createCategory(name: string): Promise<ApiResponse<Category>> {
+    return this.call('POST', API_URLS.dms.categories, { body: { name } });
+  }
+
+  updateCategory(id: string, name: string): Promise<ApiResponse<Category>> {
+    return this.call('PATCH', API_URLS.dms.category(id), { body: { name } });
+  }
+
+  deleteCategory(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.call('DELETE', API_URLS.dms.category(id));
   }
 
   updateProfile(companyRole: string): Promise<ApiResponse<CurrentProfile>> {

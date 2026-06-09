@@ -8,10 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
-import { DOCUMENT_CATEGORIES, categoryLabels } from '@/lib/dms';
-import { useCreateDocument, useCreateFolder, useAllFolders } from '@/hooks/use-dms';
+import { useCategories, useCreateCategory, useCreateDocument, useCreateFolder, useAllFolders } from '@/hooks/use-dms';
 import { useDmsStore } from '@/store/dms-store';
-import type { DocumentCategory } from '@prisma/client';
 
 type UploadedFile = {
   url: string;
@@ -28,23 +26,50 @@ export function UploadDocumentModal() {
   const pendingDropFiles = useDmsStore((state) => state.pendingDropFiles);
   const setPendingDropFiles = useDmsStore((state) => state.setPendingDropFiles);
   const { data: allFolders = [], refetch: refetchFolders } = useAllFolders({ enabled: open });
+  const { data: categories = [] } = useCategories({ enabled: open });
   const createDocument = useCreateDocument();
   const createFolder = useCreateFolder(activeFolderId);
+  const createCategory = useCreateCategory();
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState(0);
-  
+
   // Folder creation state
   const [creatingParentId, setCreatingParentId] = React.useState<string | null | undefined>(undefined);
   const [folderName, setFolderName] = React.useState('');
 
+  // Inline category creation
+  const [creatingCategory, setCreatingCategory] = React.useState(false);
+  const [newCategory, setNewCategory] = React.useState('');
+
   const [form, setForm] = React.useState({
     title: '',
     description: '',
-    category: 'OPERATIONS' as DocumentCategory,
+    category: '',
     folderId: activeFolderId || '',
     isSensitive: false,
   });
+
+  // Default the category to the first available one once loaded
+  React.useEffect(() => {
+    if (open && !form.category && categories.length) {
+      setForm((f) => ({ ...f, category: categories[0].name }));
+    }
+  }, [open, categories, form.category]);
+
+  async function handleCreateCategory() {
+    const name = newCategory.trim();
+    if (!name) return;
+    try {
+      const response = await createCategory.mutateAsync(name);
+      setForm((f) => ({ ...f, category: response.data.name }));
+      setNewCategory('');
+      setCreatingCategory(false);
+      toast.success('Category created');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create category');
+    }
+  }
 
   // Keep form in sync when activeFolderId changes
   React.useEffect(() => {
@@ -111,9 +136,11 @@ export function UploadDocumentModal() {
   function reset() {
     setUploadedFiles([]);
     setUploadProgress(0);
-    setForm({ title: '', description: '', category: 'OPERATIONS', folderId: activeFolderId || '', isSensitive: false });
+    setForm({ title: '', description: '', category: categories[0]?.name || '', folderId: activeFolderId || '', isSensitive: false });
     setFolderName('');
     setCreatingParentId(undefined);
+    setCreatingCategory(false);
+    setNewCategory('');
   }
 
   async function handleCreateFolder(parentId: string | null) {
@@ -161,6 +188,7 @@ export function UploadDocumentModal() {
   const isSubmitDisabled =
     uploadedFiles.length === 0 ||
     !form.folderId ||
+    !form.category ||
     (uploadedFiles.length === 1 && !form.title.trim()) ||
     createDocument.isPending;
 
@@ -209,23 +237,58 @@ export function UploadDocumentModal() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="category" className="mb-1.5 block text-sm font-medium">Category</label>
-            <select
-              id="category"
-              value={form.category}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  category: event.target.value as DocumentCategory,
-                }))
-              }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
-            >
-              {DOCUMENT_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {categoryLabels[category]}
-                </option>
-              ))}
-            </select>
+            {creatingCategory ? (
+              <div className="flex gap-2">
+                <Input
+                  autoFocus
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateCategory();
+                    }
+                  }}
+                  placeholder="New category name"
+                  className="focus-visible:ring-0 focus-visible:border-foreground/30"
+                />
+                <Button type="button" size="sm" onClick={handleCreateCategory} disabled={createCategory.isPending}>
+                  Add
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setCreatingCategory(false);
+                    setNewCategory('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <select
+                id="category"
+                value={form.category}
+                onChange={(event) => {
+                  if (event.target.value === '__new__') {
+                    setCreatingCategory(true);
+                    return;
+                  }
+                  setForm((current) => ({ ...current, category: event.target.value }));
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-0 focus-visible:border-foreground/30"
+              >
+                {categories.length === 0 && <option value="">No categories yet</option>}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+                <option value="__new__">+ Create new category…</option>
+              </select>
+            )}
           </div>
 
           <div>

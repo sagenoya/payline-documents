@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { isAdmin } from '@/server/access-control';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { z } from 'zod';
 
@@ -29,16 +30,19 @@ export async function POST(request: Request) {
 
   const documents = await prisma.document.findMany({
     where: { id: { in: documentIds }, deletedAt: null },
-    select: { id: true, title: true, uploadedById: true },
+    select: { id: true, title: true, uploadedById: true, isSensitive: true },
   });
 
   if (!documents.length) {
     return jsonError('No documents found to move', 404);
   }
 
-  // Only uploader or CEO can move a document
-  const authorizedDocs = documents.filter(
-    (doc) => doc.uploadedById === user.id || user.profile?.companyRole === 'CEO',
+  // Sensitive docs: only uploader/admin. Others: uploader or CEO.
+  const admin = isAdmin(user.email);
+  const authorizedDocs = documents.filter((doc) =>
+    doc.isSensitive
+      ? doc.uploadedById === user.id || admin
+      : doc.uploadedById === user.id || user.profile?.companyRole === 'CEO',
   );
 
   if (!authorizedDocs.length) {

@@ -15,6 +15,7 @@ export const dmsKeys = {
   profile: ['dms', 'profile'] as const,
   dashboard: ['dms', 'dashboard'] as const,
   users: ['dms', 'users'] as const,
+  categories: ['dms', 'categories'] as const,
   folders: (parentId?: string | null) => ['dms', 'folders', parentId ?? 'root'] as const,
   folder: (folderId: string) => ['dms', 'folder', folderId] as const,
   documents: (query?: Record<string, unknown>) => ['dms', 'documents', query ?? {}] as const,
@@ -43,6 +44,42 @@ export function useUsers() {
     queryKey: dmsKeys.users,
     queryFn: async () => (await $api.dms.getUsers()).data,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCategories(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: dmsKeys.categories,
+    queryFn: async () => (await $api.dms.getCategories()).data,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => $api.dms.createCategory(name),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => $api.dms.updateCategory(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: dmsKeys.categories });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+    },
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => $api.dms.deleteCategory(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
   });
 }
 

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { canDeleteDocument } from '@/lib/dms';
+import { isAdmin } from '@/server/access-control';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { z } from 'zod';
 
@@ -21,19 +22,22 @@ export async function POST(request: Request) {
 
   const documents = await prisma.document.findMany({
     where: { id: { in: documentIds }, deletedAt: null },
-    select: { id: true, title: true, uploadedById: true },
+    select: { id: true, title: true, uploadedById: true, isSensitive: true },
   });
 
   if (!documents.length) {
     return jsonError('No documents found to delete', 404);
   }
 
+  const admin = isAdmin(user.email);
   const authorizedDocs = documents.filter((doc) =>
-    canDeleteDocument({
-      userId: user.id,
-      uploadedById: doc.uploadedById,
-      role: user.profile?.companyRole,
-    }),
+    doc.isSensitive
+      ? doc.uploadedById === user.id || admin
+      : canDeleteDocument({
+          userId: user.id,
+          uploadedById: doc.uploadedById,
+          role: user.profile?.companyRole,
+        }),
   );
 
   if (!authorizedDocs.length) {

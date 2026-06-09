@@ -55,7 +55,24 @@ function parseRoleMap(value?: string): Map<string, string> {
 }
 
 const EMAIL_ROLE_MAP = parseRoleMap(process.env.EMAIL_ROLE_MAP);
+const RESERVED_ROLES = new Set(EMAIL_ROLE_MAP.values());
 
 export function getExpectedRole(email?: string | null): string | undefined {
   return email ? EMAIL_ROLE_MAP.get(email.toLowerCase()) : undefined;
+}
+
+/** A role that some specific email is mapped to — only that email may pick it. */
+export function isReservedRole(role: string): boolean {
+  return RESERVED_ROLES.has(role.toUpperCase());
+}
+
+/**
+ * Bidirectional onboarding check. Returns false when the (email, role) pair is
+ * inconsistent with the env map: a mapped email must pick its role, and a
+ * reserved role may only be picked by its mapped email.
+ */
+export function isRoleAllowedForEmail(email: string | null | undefined, role: string): boolean {
+  const expected = getExpectedRole(email);
+  if (expected) return expected === role.toUpperCase();
+  return !isReservedRole(role);
 }

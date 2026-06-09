@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACCESS_ACTIONS, COMPANY_ROLES, DOCUMENT_CATEGORIES } from '@/lib/dms';
+import { ACCESS_ACTIONS, COMPANY_ROLES } from '@/lib/dms';
 
 export const onboardingSchema = z.object({
   companyRole: z.enum(COMPANY_ROLES as [string, ...string[]]),
@@ -13,7 +13,7 @@ export const folderCreateSchema = z.object({
 export const documentCreateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(160, 'Title is too long'),
   description: z.string().max(500, 'Description is too long').optional().nullable(),
-  category: z.enum(DOCUMENT_CATEGORIES as [string, ...string[]]),
+  category: z.string().min(1, 'Category is required').max(60, 'Category is too long'),
   fileUrl: z.string().url('File URL is required'),
   fileKey: z.string().min(1, 'File key is required'),
   mimeType: z.string().min(1, 'MIME type is required'),
@@ -28,6 +28,10 @@ export const trustedViewersSchema = z.object({
 
 export const accessResponseSchema = z.object({
   decision: z.enum(['APPROVE', 'DENY']),
+});
+
+export const categorySchema = z.object({
+  name: z.string().min(1, 'Category name is required').max(60, 'Category name is too long'),
 });
 
 export const documentAccessSchema = z.object({

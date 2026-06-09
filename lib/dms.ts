@@ -1,11 +1,13 @@
-import type { CompanyRole, ActivityAction, DocumentCategory } from '@prisma/client';
+import type { CompanyRole, ActivityAction } from '@prisma/client';
 
-export const DOCUMENT_CATEGORIES: DocumentCategory[] = [
+// Seed catalog used the first time categories are listed. Categories are now a
+// user-managed table (full CRUD), not a fixed enum.
+export const DEFAULT_CATEGORIES: string[] = [
   'HR',
-  'FINANCE',
-  'LEGAL',
-  'OPERATIONS',
-  'ENGINEERING',
+  'Finance',
+  'Legal',
+  'Operations',
+  'Engineering',
 ];
 
 export const COMPANY_ROLES: CompanyRole[] = [
@@ -47,14 +49,6 @@ export const roleLabels: Record<CompanyRole, string> = {
   COMPLIANCE: 'Compliance',
   TRADING_LEAD: 'Trading Lead',
   ACCOUNTANT: 'Accountant',
-};
-
-export const categoryLabels: Record<DocumentCategory, string> = {
-  HR: 'HR',
-  FINANCE: 'Finance',
-  LEGAL: 'Legal',
-  OPERATIONS: 'Operations',
-  ENGINEERING: 'Engineering',
 };
 
 export function canUpload(_role?: CompanyRole | null) {

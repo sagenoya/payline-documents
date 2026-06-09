@@ -102,20 +102,24 @@ export function evaluateFolderGate(
   folderId: string | null | undefined,
   user: Viewer,
   ctx: SensitiveAccessContext,
-): { locked: boolean; gate?: FolderNode } {
+): { locked: boolean; gate?: FolderNode; hasSensitiveAncestor: boolean } {
   let currentId = folderId ?? null;
   let gate: FolderNode | undefined;
+  let hasSensitiveAncestor = false;
 
   while (currentId) {
     const node = ctx.folders.get(currentId);
     if (!node) break;
-    if (node.isSensitive && !canAccessFolderNode(node, user, ctx) && !gate) {
-      gate = node;
+    if (node.isSensitive) {
+      hasSensitiveAncestor = true;
+      if (!canAccessFolderNode(node, user, ctx) && !gate) {
+        gate = node;
+      }
     }
     currentId = node.parentId;
   }
 
-  return { locked: Boolean(gate), gate };
+  return { locked: Boolean(gate), gate, hasSensitiveAncestor };
 }
 
 type AccessDoc = {
@@ -145,6 +149,11 @@ function lockForDocument(doc: AccessDoc, user: Viewer, ctx: SensitiveAccessConte
       targetName: folderGate.gate.name,
       ownerName: folderGate.gate.ownerName,
     };
+  }
+  // Having access to a sensitive folder grants access to everything inside it —
+  // documents in such a folder are never separately locked.
+  if (folderGate.hasSensitiveAncestor) {
+    return null;
   }
   if (doc.isSensitive && !canAccessDocSelf(doc, user, ctx)) {
     return {

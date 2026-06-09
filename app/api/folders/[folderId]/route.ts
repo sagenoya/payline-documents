@@ -172,8 +172,8 @@ export async function PATCH(
     }
 
     const isOwner = target.createdById === user.id;
-    if (!isOwner && target.createdById && !isAdmin(user.email)) {
-      return jsonError('Only the folder owner can change its sensitivity.', 403);
+    if (!isOwner && !isAdmin(user.email)) {
+      return jsonError('Only the folder creator or an admin can change its sensitivity.', 403);
     }
 
     const updated = await prisma.folder.update({

@@ -49,14 +49,20 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
     );
   }
 
-  const canEdit = user?.id === document.uploadedById || user?.profile?.companyRole === 'CEO';
-  const canDelete =
-    !!user &&
-    canDeleteDocument({
-      userId: user.id,
-      uploadedById: document.uploadedById,
-      role: user.profile?.companyRole,
-    });
+  const isUploader = user?.id === document.uploadedById;
+  // Sensitive documents restrict edit/move/delete to the uploader or an admin —
+  // not other roles and not people merely granted view access.
+  const canEdit = document.isSensitive
+    ? Boolean(isUploader || user?.isAdmin)
+    : Boolean(isUploader || user?.profile?.companyRole === 'CEO');
+  const canDelete = document.isSensitive
+    ? Boolean(isUploader || user?.isAdmin)
+    : !!user &&
+      canDeleteDocument({
+        userId: user.id,
+        uploadedById: document.uploadedById,
+        role: user.profile?.companyRole,
+      });
 
   async function downloadBlob() {
     try {

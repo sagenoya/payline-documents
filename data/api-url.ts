@@ -19,6 +19,8 @@ export const API_URLS = {
     profile: '/api/profile',
     dashboard: '/api/dashboard',
     users: '/api/users',
+    categories: '/api/categories',
+    category: (id: string) => `/api/categories/${id}`,
     folders: '/api/folders',
     folder: (folderId: string) => `/api/folders/${folderId}`,
     documents: '/api/documents',

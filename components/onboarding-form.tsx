@@ -6,7 +6,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useUpdateProfile } from '@/hooks/use-dms';
-import { COMPANY_ROLES, canUpload, roleLabels } from '@/lib/dms';
+import { COMPANY_ROLES, roleLabels } from '@/lib/dms';
 import { cn } from '@/lib/utils';
 
 export function OnboardingForm() {
@@ -72,7 +72,6 @@ export function OnboardingForm() {
           >
             <span>
               <span className="block font-medium text-foreground">{roleLabels[role]}</span>
-              <small>{canUpload(role) ? 'Can upload documents' : 'Browse and download access'}</small>
             </span>
             {selectedRole === role && <CheckCircle2 className="size-4 text-primary" />}
           </button>

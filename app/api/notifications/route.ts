@@ -14,7 +14,7 @@ export async function GET() {
             accessRequest: {
               include: {
                 requester: { select: { id: true, name: true, email: true, imageUrl: true } },
-                document: { select: { id: true, title: true } },
+                document: { select: { id: true, title: true, folder: { select: { id: true, name: true } } } },
                 folder: { select: { id: true, name: true } },
               },
             },

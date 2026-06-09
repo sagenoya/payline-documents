@@ -17,14 +17,6 @@ enum CompanyRole {
   ACCOUNTANT
 }
 
-enum DocumentCategory {
-  HR
-  FINANCE
-  LEGAL
-  OPERATIONS
-  ENGINEERING
-}
-
 enum ActivityAction {
   VIEW
   DOWNLOAD
@@ -156,7 +148,7 @@ model Document {
   id             String              @id @default(cuid())
   title          String
   description    String?
-  category       DocumentCategory
+  category       String
   isSensitive    Boolean             @default(false)
   version        Int                 @default(1)
   fileUrl        String
@@ -223,4 +215,12 @@ model ActivityLog {
   @@index([timestamp])
   @@index([timestamp, action])
   @@index([action, timestamp])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

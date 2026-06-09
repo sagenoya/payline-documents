@@ -1,4 +1,4 @@
-import type { CompanyRole, ActivityAction, DocumentCategory } from '@prisma/client';
+import type { CompanyRole, ActivityAction } from '@prisma/client';
 
 type DateLike = string | Date;
 
@@ -54,7 +54,7 @@ export type DocumentSummary = LockMeta & {
   id: string;
   title: string;
   description?: string | null;
-  category: DocumentCategory;
+  category: string;
   isSensitive: boolean;
   fileUrl: string;
   fileKey: string;
@@ -84,15 +84,24 @@ export type ActivityLogType = {
   targetName?: string | null;
   targetType?: string | null;
   user: BasicUser;
-  document?: Pick<DocumentSummary, 'id' | 'title' | 'category' | 'fileUrl' | 'mimeType'> | null;
+  document?: (Pick<DocumentSummary, 'id' | 'title' | 'category' | 'fileUrl' | 'mimeType'> & {
+    folder?: Pick<FolderSummary, 'id' | 'name'> | null;
+  }) | null;
   folder?: Pick<FolderSummary, 'id' | 'name'> | null;
   timestamp: DateLike;
+};
+
+export type Category = {
+  id: string;
+  name: string;
+  createdById?: string | null;
+  documentCount?: number;
 };
 
 export type CreateDocumentInput = {
   title: string;
   description?: string | null;
-  category: DocumentCategory;
+  category: string;
   fileUrl: string;
   fileKey: string;
   mimeType: string;
@@ -116,7 +125,9 @@ export type NotificationItem = {
     status: AccessRequestStatus;
     expiresAt?: DateLike | null;
     requester: BasicUser;
-    document?: Pick<DocumentSummary, 'id' | 'title'> | null;
+    document?: (Pick<DocumentSummary, 'id' | 'title'> & {
+      folder?: Pick<FolderSummary, 'id' | 'name'> | null;
+    }) | null;
     folder?: Pick<FolderSummary, 'id' | 'name'> | null;
   } | null;
 };

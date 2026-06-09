@@ -45,6 +45,7 @@ export function RequestAccessModal({
       toast.success(
         target.ownerName ? `Access requested from ${target.ownerName}` : 'Access requested',
       );
+      onOpenChange(false);
     } catch (error) {
       setRequested(false);
       toast.error(error instanceof Error ? error.message : 'Unable to request access');

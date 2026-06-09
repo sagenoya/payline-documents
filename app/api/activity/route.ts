@@ -41,6 +41,7 @@ export async function GET(request: Request) {
                 category: true,
                 fileUrl: true,
                 mimeType: true,
+                folder: { select: { id: true, name: true } },
               },
             },
             folder: {

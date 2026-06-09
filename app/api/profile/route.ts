@@ -1,7 +1,7 @@
 import type { CompanyRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { canUpload } from '@/lib/dms';
-import { canViewActivity, getExpectedRole, isAdmin } from '@/server/access-control';
+import { canViewActivity, isAdmin, isRoleAllowedForEmail } from '@/server/access-control';
 import { onboardingSchema } from '@/lib/validations/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { withDbTimeout } from '@/server/db';
@@ -33,9 +33,8 @@ export async function PATCH(request: Request) {
       return jsonError(parsed.error.issues[0]?.message ?? 'Invalid role', 422);
     }
 
-    const expectedRole = getExpectedRole(user.email);
-    if (expectedRole && expectedRole !== parsed.data.companyRole) {
-      return jsonError('That role doesn’t match your account. Please select your correct role.', 422);
+    if (!isRoleAllowedForEmail(user.email, parsed.data.companyRole)) {
+      return jsonError('Sorry, please select your correct role.', 422);
     }
 
     const [profile] = await withDbTimeout(

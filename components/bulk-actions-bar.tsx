@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
-import { useBulkDeleteDocuments, useBulkMoveDocuments, useAllFolders } from '@/hooks/use-dms';
+import { useBulkDeleteDocuments, useBulkMoveDocuments, useAllFolders, useProfile } from '@/hooks/use-dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
 
 export function BulkActionsBar({ documents }: { documents: DocumentSummary[] }) {
   const { selectedDocumentIds, clearDocumentSelection } = useDmsStore();
+  const { data: profile } = useProfile();
   const bulkDelete = useBulkDeleteDocuments();
   const bulkMove = useBulkMoveDocuments();
 
@@ -23,6 +24,14 @@ export function BulkActionsBar({ documents }: { documents: DocumentSummary[] }) 
   const { data: allFolders = [] } = useAllFolders({ enabled: moveOpen });
 
   const count = selectedDocumentIds.length;
+
+  // Hide move/delete if any selected document is a sensitive one the user doesn't
+  // own (and isn't an admin) — those actions are uploader/admin-only.
+  const selectedDocs = documents.filter((d) => selectedDocumentIds.includes(d.id));
+  const canMutateSelection = selectedDocs.every(
+    (d) => !d.isSensitive || d.uploadedById === profile?.id || profile?.isAdmin,
+  );
+
   if (count === 0) return null;
 
   async function handleBulkDelete() {
@@ -94,14 +103,18 @@ export function BulkActionsBar({ documents }: { documents: DocumentSummary[] }) 
             <Download className="mr-1.5 size-4" />
             Download
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setMoveOpen(true)}>
-            <FolderInput className="mr-1.5 size-4" />
-            Move
-          </Button>
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="mr-1.5 size-4" />
-            Delete
-          </Button>
+          {canMutateSelection && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setMoveOpen(true)}>
+                <FolderInput className="mr-1.5 size-4" />
+                Move
+              </Button>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="mr-1.5 size-4" />
+                Delete
+              </Button>
+            </>
+          )}
 
           <div className="h-5 w-px bg-border" />
 

@@ -98,8 +98,7 @@ function FolderCard({
   const canUpload = profile?.canUpload ?? false;
   const locked = Boolean(folder.locked);
   const canManageSensitive =
-    Boolean(profile) &&
-    (profile!.isAdmin || folder.createdById === profile!.id || !folder.createdById);
+    Boolean(profile) && (profile!.isAdmin || folder.createdById === profile!.id);
 
   function handleCardClick(e: React.MouseEvent) {
     if (locked) {
@@ -204,11 +203,23 @@ function FolderCard({
         <div className="min-w-0">
           <p className="truncate uppercase font-bold text-foreground flex items-center gap-1.5">
             {folder.name}
-            {folder.isSensitive && (
-              <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
-                <Lock className="size-2.5" />
-                {locked ? 'Locked' : 'Sensitive'}
-              </span>
+            {(folder.isSensitive || locked) && (
+              locked ? (
+                <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
+                  <Lock className="size-2.5" />
+                  Locked
+                </span>
+              ) : canManageSensitive ? (
+                <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
+                  <Lock className="size-2.5" />
+                  Sensitive
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-green-500/10 px-1.5 py-0.5 text-[10px] uppercase text-green-600">
+                  <LockOpen className="size-2.5" />
+                  Access granted
+                </span>
+              )
             )}
           </p>
           {folder._count && (

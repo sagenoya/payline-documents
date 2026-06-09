@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
 import { useProfile, useSaveTrustedViewers, useTrustedViewers, useUsers } from '@/hooks/use-dms';
+import { CategoriesManager } from '@/components/categories-manager';
 import { cn } from '@/lib/utils';
 
 export function SettingsClient() {
@@ -132,6 +133,8 @@ export function SettingsClient() {
           </Button>
         </div>
       </section>
+
+      <CategoriesManager />
     </div>
   );
 }
