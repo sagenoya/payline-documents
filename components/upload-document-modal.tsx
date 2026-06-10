@@ -153,7 +153,7 @@ export function UploadDocumentModal() {
       setFolderName('');
       setCreatingParentId(undefined);
     } catch (error) {
-      toast.error('Failed to create folder');
+      toast.error(error instanceof Error ? error.message : 'Failed to create folder');
     }
   }
 
@@ -181,7 +181,7 @@ export function UploadDocumentModal() {
       reset();
       setOpen(false);
     } catch (error) {
-      toast.error('Failed to save document(s)');
+      toast.error(error instanceof Error ? error.message : 'Failed to save document(s)');
     }
   }
 

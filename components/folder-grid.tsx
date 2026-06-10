@@ -37,7 +37,7 @@ export function FolderGrid({ folders }: { folders: FolderSummary[] }) {
 
   return (
     <>
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {folders.map((folder) => (
           <FolderCard
             key={folder.id}
@@ -99,6 +99,8 @@ function FolderCard({
   const locked = Boolean(folder.locked);
   const canManageSensitive =
     Boolean(profile) && (profile!.isAdmin || folder.createdById === profile!.id);
+  // The creator can always delete their own folder, on top of the role/admin gate.
+  const canDeleteThis = canDelete || canManageSensitive;
 
   function handleCardClick(e: React.MouseEvent) {
     if (locked) {
@@ -248,27 +250,27 @@ function FolderCard({
           </Button>
         )}
         {canDelete && (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Move ${folder.name}`}
-              onClick={() => onMove(folder)}
-            >
-              <FolderInput className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Delete ${folder.name}`}
-              disabled={deleteFolderPending}
-              onClick={() => onDelete(folder)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Move ${folder.name}`}
+            onClick={() => onMove(folder)}
+          >
+            <FolderInput className="size-4" />
+          </Button>
+        )}
+        {canDeleteThis && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${folder.name}`}
+            disabled={deleteFolderPending}
+            onClick={() => onDelete(folder)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
         )}
       </div>
 

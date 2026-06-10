@@ -60,7 +60,25 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => $api.dms.createCategory(name),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
+    onMutate: async (name) => {
+      await queryClient.cancelQueries({ queryKey: dmsKeys.categories });
+      const previous = queryClient.getQueryData(dmsKeys.categories);
+      const profile: any = queryClient.getQueryData(dmsKeys.profile);
+      const optimistic = {
+        id: `temp-${Date.now()}`,
+        name,
+        createdById: profile?.id ?? null,
+        documentCount: 0,
+      };
+      queryClient.setQueryData(dmsKeys.categories, (old: any) =>
+        Array.isArray(old) ? [...old, optimistic] : old,
+      );
+      return { previous };
+    },
+    onError: (_e, _name, context) => {
+      if (context?.previous) queryClient.setQueryData(dmsKeys.categories, context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
   });
 }
 
@@ -68,7 +86,18 @@ export function useUpdateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => $api.dms.updateCategory(id, name),
-    onSuccess: () => {
+    onMutate: async ({ id, name }) => {
+      await queryClient.cancelQueries({ queryKey: dmsKeys.categories });
+      const previous = queryClient.getQueryData(dmsKeys.categories);
+      queryClient.setQueryData(dmsKeys.categories, (old: any) =>
+        Array.isArray(old) ? old.map((c: any) => (c.id === id ? { ...c, name } : c)) : old,
+      );
+      return { previous };
+    },
+    onError: (_e, _v, context) => {
+      if (context?.previous) queryClient.setQueryData(dmsKeys.categories, context.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: dmsKeys.categories });
       queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
     },
@@ -79,7 +108,18 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => $api.dms.deleteCategory(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: dmsKeys.categories });
+      const previous = queryClient.getQueryData(dmsKeys.categories);
+      queryClient.setQueryData(dmsKeys.categories, (old: any) =>
+        Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old,
+      );
+      return { previous };
+    },
+    onError: (_e, _v, context) => {
+      if (context?.previous) queryClient.setQueryData(dmsKeys.categories, context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
   });
 }
 
@@ -120,12 +160,63 @@ export function useAllFolders(options?: { enabled?: boolean }) {
   });
 }
 
+// Prepends a folder to a cached list, handling the infinite (`pages`) and
+// single-page (`data`) shapes.
+function prependFolderToCache(oldData: any, folder: any) {
+  if (!oldData) return oldData;
+  if (Array.isArray(oldData.pages)) {
+    return {
+      ...oldData,
+      pages: oldData.pages.map((page: any, index: number) =>
+        index === 0 ? { ...page, data: [folder, ...(page.data ?? [])] } : page,
+      ),
+    };
+  }
+  if (Array.isArray(oldData.data)) {
+    return { ...oldData, data: [folder, ...oldData.data] };
+  }
+  return oldData;
+}
+
 export function useCreateFolder(parentId?: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateFolderInput) => $api.dms.createFolder(data),
-    onSuccess: () => {
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: ['dms', 'folders'] });
+      await queryClient.cancelQueries({ queryKey: ['dms', 'folder'] });
+      const profile: any = queryClient.getQueryData(dmsKeys.profile);
+      const now = new Date().toISOString();
+      const optimistic = {
+        id: `temp-${Date.now()}`,
+        name: data.name,
+        parentId: parentId ?? null,
+        isSensitive: false,
+        createdById: profile?.id ?? null,
+        createdBy: profile ? { id: profile.id, name: profile.name } : null,
+        createdAt: now,
+        updatedAt: now,
+        _count: { children: 0, documents: 0 },
+      };
+      const previous = [
+        ...queryClient.getQueriesData({ queryKey: dmsKeys.folders(parentId) }),
+        ...queryClient.getQueriesData({ queryKey: ['dms', 'folder'] }),
+      ];
+      queryClient.setQueriesData({ queryKey: dmsKeys.folders(parentId) }, (old: any) =>
+        prependFolderToCache(old, optimistic),
+      );
+      if (parentId) {
+        queryClient.setQueryData(dmsKeys.folder(parentId), (old: any) =>
+          old?.children ? { ...old, children: [optimistic, ...old.children] } : old,
+        );
+      }
+      return { previous };
+    },
+    onError: (_error, _data, context) => {
+      context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
     },
@@ -280,11 +371,69 @@ export function useRestoreDocument() {
   });
 }
 
+// Removes a folder from any cached folder list, handling both the infinite
+// (`pages`) and single-page (`data`) shapes.
+function removeFolderFromCache(oldData: any, folderId: string) {
+  if (!oldData) return oldData;
+  if (Array.isArray(oldData.pages)) {
+    return {
+      ...oldData,
+      pages: oldData.pages.map((page: any) => ({
+        ...page,
+        data: page.data?.filter((f: any) => f.id !== folderId) ?? page.data,
+      })),
+    };
+  }
+  if (Array.isArray(oldData.data)) {
+    return { ...oldData, data: oldData.data.filter((f: any) => f.id !== folderId) };
+  }
+  return oldData;
+}
+
+// Applies a patch to a folder (by id) wherever it appears: list caches and the
+// `children` array of any cached folder-detail.
+function patchFolderInCache(oldData: any, folderId: string, patch: Record<string, unknown>) {
+  if (!oldData) return oldData;
+  const apply = (f: any) => (f.id === folderId ? { ...f, ...patch } : f);
+  if (Array.isArray(oldData.pages)) {
+    return {
+      ...oldData,
+      pages: oldData.pages.map((page: any) => ({ ...page, data: page.data?.map(apply) ?? page.data })),
+    };
+  }
+  if (Array.isArray(oldData.data)) {
+    return { ...oldData, data: oldData.data.map(apply) };
+  }
+  if (oldData.id === folderId) return { ...oldData, ...patch };
+  if (Array.isArray(oldData.children)) {
+    return { ...oldData, children: oldData.children.map(apply) };
+  }
+  return oldData;
+}
+
 export function useDeleteFolder() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (folderId: string) => $api.dms.deleteFolder(folderId),
+    onMutate: async (folderId) => {
+      await queryClient.cancelQueries({ queryKey: ['dms', 'folders'] });
+      await queryClient.cancelQueries({ queryKey: ['dms', 'folder'] });
+      const previous = [
+        ...queryClient.getQueriesData({ queryKey: ['dms', 'folders'] }),
+        ...queryClient.getQueriesData({ queryKey: ['dms', 'folder'] }),
+      ];
+      queryClient.setQueriesData({ queryKey: ['dms', 'folders'] }, (old: any) =>
+        removeFolderFromCache(old, folderId),
+      );
+      queryClient.setQueriesData({ queryKey: ['dms', 'folder'] }, (old: any) =>
+        old?.children ? { ...old, children: old.children.filter((c: any) => c.id !== folderId) } : old,
+      );
+      return { previous };
+    },
+    onError: (_error, _folderId, context) => {
+      context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
@@ -392,7 +541,25 @@ export function useSetFolderSensitive() {
   return useMutation({
     mutationFn: ({ id, isSensitive }: { id: string; isSensitive: boolean }) =>
       $api.dms.setFolderSensitive(id, isSensitive),
-    onSuccess: () => {
+    onMutate: async ({ id, isSensitive }) => {
+      await queryClient.cancelQueries({ queryKey: ['dms', 'folders'] });
+      await queryClient.cancelQueries({ queryKey: ['dms', 'folder'] });
+      const previous = [
+        ...queryClient.getQueriesData({ queryKey: ['dms', 'folders'] }),
+        ...queryClient.getQueriesData({ queryKey: ['dms', 'folder'] }),
+      ];
+      queryClient.setQueriesData({ queryKey: ['dms', 'folders'] }, (old: any) =>
+        patchFolderInCache(old, id, { isSensitive }),
+      );
+      queryClient.setQueriesData({ queryKey: ['dms', 'folder'] }, (old: any) =>
+        patchFolderInCache(old, id, { isSensitive }),
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
