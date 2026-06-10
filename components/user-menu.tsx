@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { roleLabels } from '@/lib/dms';
+import { maskEmail } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { CurrentProfile } from '@/types/dms';
 
@@ -101,7 +102,7 @@ export function UserMenu({ profile }: { profile?: CurrentProfile }) {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-foreground">{profile?.name || 'Team member'}</p>
-              <p className="truncate text-xs text-muted-foreground">{profile?.email || 'Signed in'}</p>
+              <p className="truncate text-xs text-muted-foreground">{profile?.email ? maskEmail(profile.email) : 'Signed in'}</p>
               {role && (
                 <p className="mt-1 truncate text-xs font-medium text-primary">{roleLabels[role]}</p>
               )}

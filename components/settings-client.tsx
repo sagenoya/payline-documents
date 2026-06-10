@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
 import { useProfile, useSaveTrustedViewers, useTrustedViewers, useUsers } from '@/hooks/use-dms';
 import { CategoriesManager } from '@/components/categories-manager';
+import { maskEmail } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
 export function SettingsClient() {
@@ -103,7 +104,7 @@ export function SettingsClient() {
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                        <p className="truncate text-xs text-muted-foreground">{maskEmail(user.email)}</p>
                       </div>
                       <span
                         className={cn(

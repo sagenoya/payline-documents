@@ -159,8 +159,9 @@ export async function PATCH(
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid folder update', 422);
   }
 
-  // Sensitivity toggle: handled separately from moves. The folder creator or an
-  // admin may toggle it; an unowned (legacy) folder is claimed by whoever marks it.
+  // Sensitivity toggle: handled separately from moves. Only the folder creator or
+  // an admin may toggle it (an owner-less legacy folder is therefore admin-only),
+  // and an owner-less folder gains the admin who marks it as its approver-owner.
   if (parsed.data.isSensitive !== undefined && parsed.data.parentId === undefined) {
     const target = await prisma.folder.findUnique({
       where: { id: folderId },
