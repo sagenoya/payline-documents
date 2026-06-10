@@ -42,6 +42,7 @@ export type FolderSummary = LockMeta & {
   parentId?: string | null;
   isSensitive?: boolean;
   createdById?: string | null;
+  createdBy?: { id: string; name: string } | null;
   createdAt: DateLike;
   updatedAt: DateLike;
   _count?: {

@@ -44,6 +44,9 @@ export async function GET(
       children: {
         orderBy: { name: 'asc' },
       },
+      createdBy: {
+        select: { id: true, name: true },
+      },
     },
   });
 
@@ -63,6 +66,7 @@ export async function GET(
       parentId: rawFolder.parentId,
       isSensitive: rawFolder.isSensitive,
       createdById: rawFolder.createdById,
+      createdBy: rawFolder.createdBy,
       createdAt: rawFolder.createdAt,
       updatedAt: rawFolder.updatedAt,
       children: [],
@@ -103,10 +107,6 @@ export async function DELETE(
   const user = await requireClerkUser();
   const { folderId } = await params;
 
-  if (!canDeleteFolder(user.profile?.companyRole)) {
-    return jsonError('Only a Frontend Developer can delete folders.', 403);
-  }
-
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
     include: {
@@ -118,6 +118,13 @@ export async function DELETE(
 
   if (!folder) {
     return jsonError('Folder not found', 404);
+  }
+
+  // The folder creator can always delete their own folder; otherwise a
+  // Frontend Developer or an admin may delete it.
+  const isOwner = folder.createdById === user.id;
+  if (!isOwner && !isAdmin(user.email) && !canDeleteFolder(user.profile?.companyRole)) {
+    return jsonError('You can only delete folders you created.', 403);
   }
 
   const documentCount = await prisma.document.count({

@@ -76,6 +76,16 @@ export async function POST(request: Request) {
 
     const name = parsed.data.name.trim();
 
+    // Case-insensitive duplicate guard ("Finance" and "finance" collide).
+    const duplicate = await prisma.category.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } },
+      select: { id: true },
+    });
+
+    if (duplicate) {
+      return jsonError(`A category named “${name}” already exists.`, 409);
+    }
+
     try {
       const category = await prisma.category.create({ data: { name, createdById: user.id } });
       return jsonOk(category, { status: 201 });

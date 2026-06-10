@@ -30,7 +30,7 @@ export function CreateFolderButton({
       setOpen(false);
       setName('');
     } catch (error) {
-      toast.error('Failed to create folder');
+      toast.error(error instanceof Error ? error.message : 'Failed to create folder');
     }
   }
 

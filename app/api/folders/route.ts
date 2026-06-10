@@ -85,13 +85,29 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid folder', 422);
   }
 
+  const trimmedName = parsed.data.name.trim();
+  const parentId = parsed.data.parentId || null;
+
+  // Reject duplicate names within the same parent, case-insensitively
+  // ("Legal" and "legal" collide). The DB unique constraint is the backstop.
+  const duplicate = await withDbTimeout(
+    prisma.folder.findFirst({
+      where: { parentId, name: { equals: trimmedName, mode: 'insensitive' } },
+      select: { id: true },
+    }),
+  );
+
+  if (duplicate) {
+    return jsonError(`A folder named “${trimmedName}” already exists here.`, 409);
+  }
+
   let folder;
   try {
     folder = await withDbTimeout(
       prisma.folder.create({
         data: {
-          name: parsed.data.name.trim(),
-          parentId: parsed.data.parentId || null,
+          name: trimmedName,
+          parentId,
           createdById: user.id,
         },
       }),

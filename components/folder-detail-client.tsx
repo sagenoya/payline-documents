@@ -136,7 +136,7 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-2">
+          <h1 className="flex items-center gap-2 capitalize">
             {folder.name}
             {folder.isSensitive && (
               canManageSensitive ? (
@@ -168,7 +168,12 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
               </Button>
             )}
           </h1>
-          <p className="mt-1">Nested folders and documents in this workspace.</p>
+          <p className="mt-1">
+            Nested folders and documents in this workspace.
+            {folder.createdBy?.name ? (
+              <span className="text-muted-foreground"> · Created by {folder.createdBy.name}</span>
+            ) : null}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground/70 flex items-center gap-1">
             <UploadCloud className="size-3" />
             Tip: Drag and drop files anywhere on this page to upload directly to this folder.

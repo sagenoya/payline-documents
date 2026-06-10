@@ -102,12 +102,32 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid document', 422);
   }
 
+  const documentTitle = parsed.data.title.trim();
+  const targetFolderId = parsed.data.folderId || null;
+
+  // Reject duplicate titles within the same folder, case-insensitively.
+  const duplicate = await withDbTimeout(
+    prisma.document.findFirst({
+      where: {
+        folderId: targetFolderId,
+        deletedAt: null,
+        title: { equals: documentTitle, mode: 'insensitive' },
+      },
+      select: { id: true },
+    }),
+  );
+
+  if (duplicate) {
+    return jsonError(`A document named “${documentTitle}” already exists in this folder.`, 409);
+  }
+
   const document = await withDbTimeout(
     prisma.document.create({
       data: {
         ...parsed.data,
+        title: documentTitle,
         description: parsed.data.description || null,
-        folderId: parsed.data.folderId || null,
+        folderId: targetFolderId,
         category: parsed.data.category,
         uploadedById: user.id,
       },

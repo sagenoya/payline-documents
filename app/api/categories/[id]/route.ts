@@ -32,6 +32,19 @@ export async function PATCH(
       return jsonOk(category);
     }
 
+    // Block renaming onto another category's name, case-insensitively. A
+    // case-only change to this same category is allowed (self is excluded).
+    const duplicate = await withDbTimeout(
+      prisma.category.findFirst({
+        where: { id: { not: id }, name: { equals: name, mode: 'insensitive' } },
+        select: { id: true },
+      }),
+    );
+
+    if (duplicate) {
+      return jsonError(`A category named “${name}” already exists.`, 409);
+    }
+
     try {
       // Rename the catalog entry and re-tag every document using the old name so
       // existing documents follow the rename (category is stored by name).
