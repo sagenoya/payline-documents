@@ -200,29 +200,11 @@ function FolderCard({
           'flex size-10 items-center justify-center rounded-md bg-muted text-primary transition duration-200',
           isDragOver && 'bg-primary text-primary-foreground'
         )}>
-          {locked ? <Lock className="size-5 text-red-600" /> : <Folder className="size-5" />}
+          <Folder className="size-5" />
         </div>
         <div className="min-w-0">
-          <p className="truncate uppercase font-bold text-foreground flex items-center gap-1.5">
+          <p className="truncate uppercase font-bold text-foreground">
             {folder.name}
-            {(folder.isSensitive || locked) && (
-              locked ? (
-                <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
-                  <Lock className="size-2.5" />
-                  Locked
-                </span>
-              ) : canManageSensitive ? (
-                <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
-                  <Lock className="size-2.5" />
-                  Sensitive
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 shrink-0 rounded-sm bg-green-500/10 px-1.5 py-0.5 text-[10px] uppercase text-green-600">
-                  <LockOpen className="size-2.5" />
-                  Access granted
-                </span>
-              )
-            )}
           </p>
           {folder._count && (
             <small>

@@ -1,38 +1,11 @@
-import { FileImage, FileSpreadsheet, FileText, FileType, Lock, LockOpen, UploadCloud } from 'lucide-react';
+import { FileImage, FileSpreadsheet, FileText, FileType, UploadCloud } from 'lucide-react';
 import { DocumentActions } from '@/components/document-actions';
 import { BulkActionsBar } from '@/components/bulk-actions-bar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatBytes, formatDate } from '@/lib/formatters';
-import { useProfile } from '@/hooks/use-dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
-
-function SensitiveBadge({ document, isOwner }: { document: DocumentSummary; isOwner: boolean }) {
-  if (!document.isSensitive && !document.locked) return null;
-  if (document.locked) {
-    return (
-      <span className="inline-flex items-center gap-1 align-middle ml-2 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
-        <Lock className="size-2.5" />
-        Locked
-      </span>
-    );
-  }
-  if (isOwner) {
-    return (
-      <span className="inline-flex items-center gap-1 align-middle ml-2 shrink-0 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
-        <Lock className="size-2.5" />
-        Sensitive
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 align-middle ml-2 shrink-0 rounded-sm bg-green-500/10 px-1.5 py-0.5 text-[10px] uppercase text-green-600">
-      <LockOpen className="size-2.5" />
-      Access granted
-    </span>
-  );
-}
 
 function getFileIcon(mimeType: string) {
   if (mimeType.includes('image')) return FileImage;
@@ -115,8 +88,6 @@ export function DocumentList({
 function DocumentRow({ document }: { document: DocumentSummary }) {
   const Icon = getFileIcon(document.mimeType);
   const { selectedDocumentIds, toggleDocumentSelection } = useDmsStore();
-  const { data: profile } = useProfile();
-  const isOwner = profile?.id === document.uploadedById;
 
   return (
     <div className="flex flex-col gap-2 px-4 py-3 text-sm w-full md:grid md:grid-cols-[2.5fr_1fr_1fr_auto] md:gap-4 md:items-center">
@@ -141,7 +112,6 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
         <div className="min-w-0 flex-1">
           <p className="font-medium text-foreground break-words leading-snug" title={document.title}>
             {document.title}
-            <SensitiveBadge document={document} isOwner={isOwner} />
             {new Date(document.updatedAt).getTime() - new Date(document.createdAt).getTime() > 1000 && (
               <span className="inline-block align-middle ml-2 shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Edited</span>
             )}

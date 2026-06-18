@@ -138,19 +138,6 @@ export function FolderDetailClient({ folderId }: { folderId: string }) {
         <div>
           <h1 className="flex items-center gap-2 capitalize">
             {folder.name}
-            {folder.isSensitive && (
-              canManageSensitive ? (
-                <span className="inline-flex items-center gap-1 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-[10px] uppercase text-red-600">
-                  <Lock className="size-2.5" />
-                  Sensitive
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-sm bg-green-500/10 px-1.5 py-0.5 text-[10px] uppercase text-green-600">
-                  <LockOpen className="size-2.5" />
-                  Access granted
-                </span>
-              )
-            )}
             {canManageSensitive && (
               <Button
                 type="button"

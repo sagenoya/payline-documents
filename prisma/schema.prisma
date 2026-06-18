@@ -54,6 +54,7 @@ model User {
   activityLogs     ActivityLog[]
   trustedViewers   TrustedViewer[]     @relation("TrustedViewerOwner")
   trustedByOwners  TrustedViewer[]     @relation("TrustedViewerViewer")
+  documentAllows   DocumentAllow[]
   accessRequestsMade     AccessRequest[] @relation("AccessRequester")
   accessRequestsReceived AccessRequest[] @relation("AccessOwner")
   createdFolders   Folder[]            @relation("FolderCreator")
@@ -162,6 +163,7 @@ model Document {
   activityLogs   ActivityLog[]
   versions       DocumentVersion[]
   accessRequests AccessRequest[]
+  allowedUsers   DocumentAllow[]
   lastAccessedAt DateTime?
   deletedAt      DateTime?
   deletedById    String?
@@ -223,4 +225,20 @@ model Category {
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Per-document allow list set at upload time. A user listed here may always open
+// and download the document, piercing any sensitive folder it lives in — without
+// gaining access to the rest of that folder's contents.
+model DocumentAllow {
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([documentId, userId])
+  @@index([documentId])
+  @@index([userId])
 }

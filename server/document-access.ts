@@ -14,6 +14,13 @@ export type SensitiveAccessContext = {
   trustedByOwnerIds: Set<string>;
   approvedDocIds: Set<string>;
   approvedFolderIds: Set<string>;
+  // Documents the user is on the upload-time allow list for. These pierce folder
+  // sensitivity for that one document only.
+  allowedDocIds: Set<string>;
+  // Folders the user may navigate INTO (but not freely access) because they hold,
+  // somewhere in their subtree, a document the user is allow-listed for. This is
+  // the ancestor chain of every allowed document's folder.
+  passableFolderIds: Set<string>;
   folders: Map<string, FolderNode>;
 };
 
@@ -32,7 +39,7 @@ export type LockInfo = {
  * per-folder), and the full folder tree so folder sensitivity can cascade.
  */
 export async function getSensitiveAccessContext(userId: string): Promise<SensitiveAccessContext> {
-  const [trusted, approved, folders] = await Promise.all([
+  const [trusted, approved, allowed, folders] = await Promise.all([
     prisma.trustedViewer.findMany({
       where: { viewerId: userId },
       select: { ownerId: true },
@@ -44,6 +51,10 @@ export async function getSensitiveAccessContext(userId: string): Promise<Sensiti
         expiresAt: { gt: new Date() },
       },
       select: { documentId: true, folderId: true },
+    }),
+    prisma.documentAllow.findMany({
+      where: { userId },
+      select: { documentId: true, document: { select: { folderId: true } } },
     }),
     prisma.folder.findMany({
       select: {
@@ -78,10 +89,25 @@ export async function getSensitiveAccessContext(userId: string): Promise<Sensiti
     ]),
   );
 
+  // For every document the user is allow-listed for, mark its folder and all
+  // ancestors as "passable" so the user can navigate down to reach it.
+  const allowedDocIds = new Set<string>();
+  const passableFolderIds = new Set<string>();
+  allowed.forEach((a) => {
+    allowedDocIds.add(a.documentId);
+    let currentId = a.document?.folderId ?? null;
+    while (currentId && !passableFolderIds.has(currentId)) {
+      passableFolderIds.add(currentId);
+      currentId = folderMap.get(currentId)?.parentId ?? null;
+    }
+  });
+
   return {
     trustedByOwnerIds: new Set(trusted.map((t) => t.ownerId)),
     approvedDocIds,
     approvedFolderIds,
+    allowedDocIds,
+    passableFolderIds,
     folders: folderMap,
   };
 }
@@ -136,10 +162,14 @@ function canAccessDocSelf(doc: AccessDoc, user: Viewer, ctx: SensitiveAccessCont
   if (doc.uploadedById === user.id) return true;
   if (isAdmin(user.email)) return true;
   if (ctx.trustedByOwnerIds.has(doc.uploadedById)) return true;
+  if (ctx.allowedDocIds.has(doc.id)) return true;
   return ctx.approvedDocIds.has(doc.id);
 }
 
 function lockForDocument(doc: AccessDoc, user: Viewer, ctx: SensitiveAccessContext): LockInfo | null {
+  // An explicit upload-time allow list grants this one document outright, even
+  // when it lives inside a sensitive folder the user otherwise cannot enter.
+  if (ctx.allowedDocIds.has(doc.id)) return null;
   // A sensitive ancestor folder takes precedence: unlocking the folder is the path in.
   const folderGate = evaluateFolderGate(doc.folderId, user, ctx);
   if (folderGate.locked && folderGate.gate) {
@@ -199,6 +229,12 @@ export function evaluateFolderLock(folderId: string, user: Viewer, ctx: Sensitiv
   const { locked, gate } = evaluateFolderGate(folderId, user, ctx);
   if (!locked || !gate) {
     return { locked: false as const };
+  }
+  // The user holds an allow-listed document somewhere inside this folder, so let
+  // them open it to reach that document. Contents are still masked per-document,
+  // so everything except the allowed file stays locked.
+  if (ctx.passableFolderIds.has(folderId)) {
+    return { locked: false as const, passable: true as const };
   }
   return {
     locked: true as const,

@@ -101,6 +101,10 @@ export class DmsModule extends FetchFactory {
     return this.call('GET', API_URLS.dms.document(documentId));
   }
 
+  getDocumentAccessList(documentId: string): Promise<ApiResponse<UserOption[]>> {
+    return this.call('GET', API_URLS.dms.documentAccessList(documentId));
+  }
+
   deleteDocument(documentId: string): Promise<ApiResponse<{ id: string }>> {
     return this.call('DELETE', API_URLS.dms.document(documentId));
   }

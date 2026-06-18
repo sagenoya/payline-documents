@@ -20,6 +20,9 @@ export const documentCreateSchema = z.object({
   size: z.number().int().positive('File size is required'),
   folderId: z.string().optional().nullable(),
   isSensitive: z.boolean().optional(),
+  // Upload-time allow list: user ids who may always open/download this document,
+  // regardless of how sensitive its folder is.
+  allowedUserIds: z.array(z.string()).max(50).optional(),
 });
 
 export const trustedViewersSchema = z.object({

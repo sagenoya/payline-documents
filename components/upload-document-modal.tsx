@@ -1,14 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, CheckCircle2, Lock, UploadCloud, X } from 'lucide-react';
+import { Loader2, CheckCircle2, Lock, UploadCloud, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
-import { useCategories, useCreateCategory, useCreateDocument, useCreateFolder, useAllFolders } from '@/hooks/use-dms';
+import { useCategories, useCreateCategory, useCreateDocument, useCreateFolder, useAllFolders, useProfile, useUsers } from '@/hooks/use-dms';
 import { useDmsStore } from '@/store/dms-store';
 
 type UploadedFile = {
@@ -27,12 +27,24 @@ export function UploadDocumentModal() {
   const setPendingDropFiles = useDmsStore((state) => state.setPendingDropFiles);
   const { data: allFolders = [], refetch: refetchFolders } = useAllFolders({ enabled: open });
   const { data: categories = [] } = useCategories({ enabled: open });
+  const { data: teamMembers = [] } = useUsers();
+  const { data: currentUser } = useProfile();
   const createDocument = useCreateDocument();
   const createFolder = useCreateFolder(activeFolderId);
   const createCategory = useCreateCategory();
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState(0);
+
+  // Per-document allow list: teammates who may always open/download the file(s).
+  const [allowedUserIds, setAllowedUserIds] = React.useState<string[]>([]);
+  const selectableMembers = teamMembers.filter((member) => member.id !== currentUser?.id);
+
+  function toggleAllowedUser(id: string) {
+    setAllowedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id],
+    );
+  }
 
   // Folder creation state
   const [creatingParentId, setCreatingParentId] = React.useState<string | null | undefined>(undefined);
@@ -136,6 +148,7 @@ export function UploadDocumentModal() {
   function reset() {
     setUploadedFiles([]);
     setUploadProgress(0);
+    setAllowedUserIds([]);
     setForm({ title: '', description: '', category: categories[0]?.name || '', folderId: activeFolderId || '', isSensitive: false });
     setFolderName('');
     setCreatingParentId(undefined);
@@ -174,6 +187,7 @@ export function UploadDocumentModal() {
             mimeType: file.type || 'application/octet-stream',
             size: file.size,
             isSensitive: form.isSensitive,
+            allowedUserIds,
           })
         )
       );
@@ -453,9 +467,10 @@ export function UploadDocumentModal() {
           <input
             type="checkbox"
             checked={form.isSensitive}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, isSensitive: event.target.checked }))
-            }
+            onChange={(event) => {
+              setForm((current) => ({ ...current, isSensitive: event.target.checked }));
+              if (!event.target.checked) setAllowedUserIds([]);
+            }}
             className="mt-0.5 size-4 accent-red-600"
           />
           <span className="space-y-0.5">
@@ -470,6 +485,61 @@ export function UploadDocumentModal() {
             </span>
           </span>
         </label>
+
+        {form.isSensitive && (
+        <div className="rounded-lg border bg-muted/20 p-4">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Users className="size-3.5 text-primary" />
+              Allow list
+            </span>
+            {selectableMembers.length > 0 && (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline hover:text-foreground"
+                onClick={() =>
+                  setAllowedUserIds(
+                    allowedUserIds.length === selectableMembers.length
+                      ? []
+                      : selectableMembers.map((member) => member.id),
+                  )
+                }
+              >
+                {allowedUserIds.length === selectableMembers.length ? 'Clear all' : 'Select all'}
+              </button>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Anyone you tick can always open and download this document — even when it sits in a
+            sensitive folder. They still won&apos;t see the rest of that folder.
+          </p>
+          <div className="mt-3 max-h-44 space-y-1 overflow-y-auto rounded-md border bg-background p-1">
+            {selectableMembers.length === 0 ? (
+              <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                No other team members yet.
+              </p>
+            ) : (
+              selectableMembers.map((member) => (
+                <label
+                  key={member.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted"
+                >
+                  <input
+                    type="checkbox"
+                    checked={allowedUserIds.includes(member.id)}
+                    onChange={() => toggleAllowedUser(member.id)}
+                    className="size-4 accent-primary"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-foreground">{member.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+        </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>

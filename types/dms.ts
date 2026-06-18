@@ -109,6 +109,7 @@ export type CreateDocumentInput = {
   size: number;
   folderId?: string | null;
   isSensitive?: boolean;
+  allowedUserIds?: string[];
 };
 
 export type AccessRequestStatus = 'PENDING' | 'APPROVED' | 'DENIED';

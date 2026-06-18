@@ -2,6 +2,23 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { withDbTimeout } from '@/server/db';
+import { isKnownUser } from '@/server/access-control';
+
+/**
+ * Marker thrown when a signed-in identity is not a Payline member. The status is
+ * 403 and the `x-payline-bounce` header lets server components route the user to
+ * the "not in Payline" screen instead of a generic error.
+ */
+function bounceResponse() {
+  return new Response('Not a Payline member', {
+    status: 403,
+    headers: { 'x-payline-bounce': '1' },
+  });
+}
+
+export function isBounceResponse(error: unknown): boolean {
+  return error instanceof Response && error.headers.get('x-payline-bounce') === '1';
+}
 
 export const requireClerkUser = cache(async function requireClerkUser() {
   const { userId, sessionClaims } = await auth();
@@ -18,6 +35,14 @@ export const requireClerkUser = cache(async function requireClerkUser() {
   );
 
   if (existingUser) {
+    // A previously-recorded user whose email is no longer (or never was) on the
+    // allow list is bounced and their record removed — we keep no outsider data.
+    if (!isKnownUser(existingUser.email)) {
+      await withDbTimeout(
+        prisma.user.delete({ where: { id: existingUser.id } }),
+      ).catch(() => undefined);
+      throw bounceResponse();
+    }
     return existingUser;
   }
 
@@ -50,6 +75,11 @@ export const requireClerkUser = cache(async function requireClerkUser() {
 
   if (!email) {
     throw new Response('Clerk user is missing an email address', { status: 422 });
+  }
+
+  // Bounce non-members before any record is created — outsiders are never stored.
+  if (!isKnownUser(email)) {
+    throw bounceResponse();
   }
 
   const resolvedName = name || email.split('@')[0];

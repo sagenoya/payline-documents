@@ -268,6 +268,14 @@ export function useDocumentsPage(query?: {
   });
 }
 
+export function useDocumentAccessList(documentId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['dms', 'documentAccessList', documentId],
+    queryFn: async () => (await $api.dms.getDocumentAccessList(documentId)).data,
+    enabled: (options?.enabled ?? true) && Boolean(documentId),
+  });
+}
+
 export function useCreateDocument() {
   const queryClient = useQueryClient();
 

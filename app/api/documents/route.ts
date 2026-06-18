@@ -102,8 +102,9 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid document', 422);
   }
 
-  const documentTitle = parsed.data.title.trim();
-  const targetFolderId = parsed.data.folderId || null;
+  const { allowedUserIds, ...documentData } = parsed.data;
+  const documentTitle = documentData.title.trim();
+  const targetFolderId = documentData.folderId || null;
 
   // Reject duplicate titles within the same folder, case-insensitively.
   const duplicate = await withDbTimeout(
@@ -124,12 +125,24 @@ export async function POST(request: Request) {
   const document = await withDbTimeout(
     prisma.document.create({
       data: {
-        ...parsed.data,
+        ...documentData,
         title: documentTitle,
-        description: parsed.data.description || null,
+        description: documentData.description || null,
         folderId: targetFolderId,
-        category: parsed.data.category,
+        category: documentData.category,
         uploadedById: user.id,
+        ...(allowedUserIds && allowedUserIds.length
+          ? {
+              allowedUsers: {
+                createMany: {
+                  data: [...new Set(allowedUserIds)]
+                    .filter((id) => id !== user.id)
+                    .map((userId) => ({ userId })),
+                  skipDuplicates: true,
+                },
+              },
+            }
+          : {}),
       },
       include: {
         uploadedBy: { select: { id: true, name: true, email: true, imageUrl: true } },

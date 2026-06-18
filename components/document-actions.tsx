@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Copy, Download, Eye, FolderOpen, History, Lock, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Download, Eye, FolderOpen, History, Lock, Pencil, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { DocumentVersionsModal } from '@/components/document-versions-modal';
 import { RequestAccessModal } from '@/components/request-access-modal';
+import { DocumentAccessListModal } from '@/components/document-access-list-modal';
 import { useDeleteDocument, useLogDocumentAccess, useProfile, useRestoreDocument } from '@/hooks/use-dms';
 import { useDmsStore } from '@/store/dms-store';
 import type { DocumentSummary } from '@/types/dms';
@@ -22,6 +23,7 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [requestOpen, setRequestOpen] = React.useState(false);
+  const [accessListOpen, setAccessListOpen] = React.useState(false);
 
   if (document.locked) {
     const target = {
@@ -168,6 +170,21 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
           </TooltipTrigger>
           <TooltipContent>Copy link</TooltipContent>
         </Tooltip>
+        {canEdit && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`See who can access ${document.title}`}
+                onClick={() => setAccessListOpen(true)}
+              >
+                <Users className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>People with access</TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -226,6 +243,13 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
         documentTitle={document.title}
         open={historyOpen}
         onOpenChange={setHistoryOpen}
+      />
+
+      <DocumentAccessListModal
+        documentId={document.id}
+        documentTitle={document.title}
+        open={accessListOpen}
+        onOpenChange={setAccessListOpen}
       />
     </>
   );

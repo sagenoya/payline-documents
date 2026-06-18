@@ -27,6 +27,7 @@ export const API_URLS = {
     document: (documentId: string) => `/api/documents/${documentId}`,
     documentRestore: (documentId: string) => `/api/documents/${documentId}/restore`,
     documentAccess: (documentId: string) => `/api/documents/${documentId}/access`,
+    documentAccessList: (documentId: string) => `/api/documents/${documentId}/access-list`,
     documentVersions: (documentId: string) => `/api/documents/${documentId}/versions`,
     bulkDelete: '/api/documents/bulk/delete',
     bulkMove: '/api/documents/bulk/move',
