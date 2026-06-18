@@ -43,7 +43,6 @@ export function DocumentAccessListModal({ documentId, documentTitle, open, onOpe
             >
               <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-subtle text-sm font-medium text-primary">
                 {member.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={member.imageUrl} alt={member.name} className="size-full object-cover" />
                 ) : (
                   member.name.charAt(0).toUpperCase()
