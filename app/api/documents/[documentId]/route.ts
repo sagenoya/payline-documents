@@ -44,6 +44,8 @@ const documentEditSchema = z.object({
   fileKey: z.string().optional(),
   mimeType: z.string().optional(),
   size: z.number().int().positive().optional(),
+  // When present, replaces the document's allow list wholesale (mirrors upload).
+  allowedUserIds: z.array(z.string()).max(50).optional(),
 });
 
 export async function PATCH(
@@ -83,6 +85,9 @@ export async function PATCH(
     Object.prototype.hasOwnProperty.call(parsed.data, 'fileUrl') &&
     parsed.data.fileUrl !== document.fileUrl;
 
+  // allowedUserIds isn't a Document column — pull it out and sync DocumentAllow separately.
+  const { allowedUserIds, ...docData } = parsed.data;
+
   const updatedDocument = await prisma.$transaction(async (tx) => {
     if (isUpdatingFile) {
       await tx.documentVersion.create({
@@ -98,13 +103,49 @@ export async function PATCH(
       });
     }
 
-    return tx.document.update({
+    const updated = await tx.document.update({
       where: { id: documentId },
       data: {
-        ...parsed.data,
+        ...docData,
         ...(isUpdatingFile ? { version: { increment: 1 } } : {}),
       },
     });
+
+    if (allowedUserIds) {
+      // The uploader always has access implicitly; never store them on the list.
+      const desired = [...new Set(allowedUserIds)].filter((id) => id !== document.uploadedById);
+
+      // Drop anyone no longer ticked.
+      await tx.documentAllow.deleteMany({
+        where: { documentId, ...(desired.length ? { userId: { notIn: desired } } : {}) },
+      });
+
+      if (desired.length) {
+        // Only notify people who weren't already on the list.
+        const existing = await tx.documentAllow.findMany({
+          where: { documentId, userId: { in: desired } },
+          select: { userId: true },
+        });
+        const existingIds = new Set(existing.map((e) => e.userId));
+        const newUserIds = desired.filter((id) => !existingIds.has(id));
+
+        if (newUserIds.length) {
+          await tx.documentAllow.createMany({
+            data: newUserIds.map((userId) => ({ documentId, userId })),
+            skipDuplicates: true,
+          });
+          await tx.notification.createMany({
+            data: newUserIds.map((userId) => ({
+              userId,
+              type: 'DOCUMENT_SHARED' as const,
+              documentId,
+            })),
+          });
+        }
+      }
+    }
+
+    return updated;
   });
 
   await logActivity({

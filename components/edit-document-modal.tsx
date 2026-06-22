@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, CheckCircle2, Lock, UploadCloud } from 'lucide-react';
+import { Loader2, CheckCircle2, Lock, UploadCloud, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,14 @@ import { Input } from '@/components/ui/input';
 import { CascadingFolderSelect } from '@/components/cascading-folder-select';
 import { useUploadThing } from '@/lib/uploadthing';
 import { useDmsStore } from '@/store/dms-store';
-import { useCategories, useProfile, useUpdateDocument, useAllFolders } from '@/hooks/use-dms';
+import {
+  useCategories,
+  useProfile,
+  useUpdateDocument,
+  useAllFolders,
+  useUsers,
+  useDocumentAccessList,
+} from '@/hooks/use-dms';
 
 type UploadedFile = {
   url: string;
@@ -25,6 +32,7 @@ export function EditDocumentModal() {
   const { data: allFolders = [] } = useAllFolders({ enabled: isOpen });
   const { data: categories = [] } = useCategories({ enabled: isOpen });
   const { data: profile } = useProfile();
+  const { data: teamMembers = [] } = useUsers();
   const updateDocument = useUpdateDocument();
   const canToggleSensitive = Boolean(
     profile && (profile.isAdmin || editingDocument?.uploadedById === profile.id),
@@ -37,6 +45,21 @@ export function EditDocumentModal() {
   const [isSensitive, setIsSensitive] = React.useState(false);
   const [uploadedFile, setUploadedFile] = React.useState<UploadedFile | null>(null);
 
+  // Per-document allow list: teammates who may always open/download the file.
+  const [allowedUserIds, setAllowedUserIds] = React.useState<string[]>([]);
+  const selectableMembers = teamMembers.filter((member) => member.id !== editingDocument?.uploadedById);
+
+  // Pull the document's saved allow list (only meaningful while it's sensitive).
+  const { data: accessList } = useDocumentAccessList(editingDocument?.id ?? '', {
+    enabled: isOpen && Boolean(editingDocument?.isSensitive),
+  });
+
+  function toggleAllowedUser(id: string) {
+    setAllowedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id],
+    );
+  }
+
   React.useEffect(() => {
     if (editingDocument) {
       setTitle(editingDocument.title);
@@ -45,8 +68,16 @@ export function EditDocumentModal() {
       setFolderId(editingDocument.folderId || null);
       setIsSensitive(Boolean(editingDocument.isSensitive));
       setUploadedFile(null); // Reset when a new document is selected
+      setAllowedUserIds([]);
     }
   }, [editingDocument]);
+
+  // Pre-tick the people already on the saved allow list.
+  React.useEffect(() => {
+    if (accessList?.scope === 'allow-list') {
+      setAllowedUserIds(accessList.members.map((member) => member.id));
+    }
+  }, [accessList]);
 
   const { startUpload, isUploading } = useUploadThing('documentUploader', {
     onClientUploadComplete: (files) => {
@@ -79,6 +110,7 @@ export function EditDocumentModal() {
           category,
           folderId,
           isSensitive,
+          allowedUserIds: isSensitive ? allowedUserIds : [],
           ...(uploadedFile && {
             fileUrl: uploadedFile.url,
             fileKey: uploadedFile.key,
@@ -163,7 +195,10 @@ export function EditDocumentModal() {
             type="checkbox"
             checked={isSensitive}
             disabled={!canToggleSensitive}
-            onChange={(e) => setIsSensitive(e.target.checked)}
+            onChange={(e) => {
+              setIsSensitive(e.target.checked);
+              if (!e.target.checked) setAllowedUserIds([]);
+            }}
             className="mt-0.5 size-4 accent-red-600"
           />
           <span className="space-y-0.5">
@@ -177,6 +212,61 @@ export function EditDocumentModal() {
             </span>
           </span>
         </label>
+
+        {isSensitive && (
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <Users className="size-3.5 text-primary" />
+                Allow list
+              </span>
+              {selectableMembers.length > 0 && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                  onClick={() =>
+                    setAllowedUserIds(
+                      allowedUserIds.length === selectableMembers.length
+                        ? []
+                        : selectableMembers.map((member) => member.id),
+                    )
+                  }
+                >
+                  {allowedUserIds.length === selectableMembers.length ? 'Clear all' : 'Select all'}
+                </button>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Anyone you tick can always open and download this document — even when it sits in a
+              sensitive folder. They still won&apos;t see the rest of that folder.
+            </p>
+            <div className="mt-3 max-h-44 space-y-1 overflow-y-auto rounded-md border bg-background p-1">
+              {selectableMembers.length === 0 ? (
+                <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                  No other team members yet.
+                </p>
+              ) : (
+                selectableMembers.map((member) => (
+                  <label
+                    key={member.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={allowedUserIds.includes(member.id)}
+                      onChange={() => toggleAllowedUser(member.id)}
+                      className="size-4 accent-primary"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">{member.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center transition-colors">
           {uploadedFile ? (

@@ -330,6 +330,7 @@ export function useUpdateDocument() {
       queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
       queryClient.invalidateQueries({ queryKey: ['dms', 'activity'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documentAccessList'] });
       queryClient.invalidateQueries({ queryKey: dmsKeys.dashboard });
     },
   });
