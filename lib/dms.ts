@@ -10,6 +10,21 @@ export const DEFAULT_CATEGORIES: string[] = [
   'Engineering',
 ];
 
+// Department tree auto-seeded as real folders on first load: each department is
+// a top-level folder, and each one holds the same three brand sub-folders. The
+// documents inside each brand folder stay unique.
+export const DEPARTMENTS: string[] = [
+  'Frontend',
+  'Backend',
+  'Compliance',
+  'Legal',
+  'Product',
+  'Finance',
+  'Trading',
+];
+
+export const DEPARTMENT_BRANDS: string[] = ['CURRENPAY', 'PAYLINE', 'WINGTIP'];
+
 export const COMPANY_ROLES: CompanyRole[] = [
   'FRONTEND_DEVELOPER',
   'BACKEND_DEVELOPER',

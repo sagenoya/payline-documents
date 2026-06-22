@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { canUpload } from '@/lib/dms';
+import { canUpload, DEPARTMENTS, DEPARTMENT_BRANDS } from '@/lib/dms';
 import { jsonError, jsonOk, requireClerkUser } from '@/server/auth';
 import { withDbTimeout } from '@/server/db';
 
@@ -7,13 +7,26 @@ export async function GET() {
   const user = await requireClerkUser();
 
   try {
-    const [documentCount, folderCount, userCount] = await withDbTimeout(
-      prisma.$transaction([
-        prisma.document.count({ where: { deletedAt: null } }),
-        prisma.folder.count(),
-        prisma.user.count(),
-      ]),
-    );
+    const [documentCount, totalFolderCount, userCount, seededDeptCount, seededBrandCount] =
+      await withDbTimeout(
+        prisma.$transaction([
+          prisma.document.count({ where: { deletedAt: null } }),
+          prisma.folder.count(),
+          prisma.user.count(),
+          // Auto-seeded department scaffold: top-level departments and their brand
+          // sub-folders. Excluded so the headline count reflects only folders people
+          // actually create.
+          prisma.folder.count({ where: { parentId: null, name: { in: DEPARTMENTS } } }),
+          prisma.folder.count({
+            where: {
+              name: { in: DEPARTMENT_BRANDS },
+              parent: { parentId: null, name: { in: DEPARTMENTS } },
+            },
+          }),
+        ]),
+      );
+
+    const folderCount = Math.max(0, totalFolderCount - seededDeptCount - seededBrandCount);
 
     return jsonOk({
       documentCount,

@@ -155,6 +155,13 @@ export type NotificationsResponse = {
   unreadCount: number;
 };
 
+export type DepartmentSummary = {
+  id: string;
+  name: string;
+  createdById?: string | null;
+  folders: Pick<FolderSummary, 'id' | 'name'>[];
+};
+
 export type CreateFolderInput = {
   name: string;
   parentId?: string | null;

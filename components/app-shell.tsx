@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/use-dms';
 import { cn } from '@/lib/utils';
 import { useDmsStore } from '@/store/dms-store';
 import { DropZoneOverlay } from '@/components/drop-zone-overlay';
+import { FoldersNav } from '@/components/folders-nav';
 
 const UploadDocumentModal = dynamic(
   () => import('@/components/upload-document-modal').then((mod) => mod.UploadDocumentModal),
@@ -61,6 +62,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav className="space-y-1">
           {navItems.map((item) => {
+            if (item.href === '/folders') {
+              return <FoldersNav key={item.href} />;
+            }
+
             const Icon = item.icon;
             const active = pathname.startsWith(item.href);
 

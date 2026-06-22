@@ -5,6 +5,7 @@ import type {
   CreateDocumentInput,
   CreateFolderInput,
   CurrentProfile,
+  DepartmentSummary,
   ActivityLogType,
   ActivityFilter,
   DashboardData,
@@ -47,6 +48,10 @@ export class DmsModule extends FetchFactory {
 
   deleteCategory(id: string): Promise<ApiResponse<{ id: string }>> {
     return this.call('DELETE', API_URLS.dms.category(id));
+  }
+
+  getDepartments(): Promise<ApiResponse<DepartmentSummary[]>> {
+    return this.call('GET', API_URLS.dms.departments);
   }
 
   updateProfile(companyRole: string): Promise<ApiResponse<CurrentProfile>> {

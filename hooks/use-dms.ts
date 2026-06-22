@@ -16,6 +16,7 @@ export const dmsKeys = {
   dashboard: ['dms', 'dashboard'] as const,
   users: ['dms', 'users'] as const,
   categories: ['dms', 'categories'] as const,
+  departments: ['dms', 'departments'] as const,
   folders: (parentId?: string | null) => ['dms', 'folders', parentId ?? 'root'] as const,
   folder: (folderId: string) => ['dms', 'folder', folderId] as const,
   documents: (query?: Record<string, unknown>) => ['dms', 'documents', query ?? {}] as const,
@@ -79,6 +80,15 @@ export function useCreateCategory() {
       if (context?.previous) queryClient.setQueryData(dmsKeys.categories, context.previous);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: dmsKeys.categories }),
+  });
+}
+
+export function useDepartments(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: dmsKeys.departments,
+    queryFn: async () => (await $api.dms.getDepartments()).data,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

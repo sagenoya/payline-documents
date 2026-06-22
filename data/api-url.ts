@@ -21,6 +21,7 @@ export const API_URLS = {
     users: '/api/users',
     categories: '/api/categories',
     category: (id: string) => `/api/categories/${id}`,
+    departments: '/api/departments',
     folders: '/api/folders',
     folder: (folderId: string) => `/api/folders/${folderId}`,
     documents: '/api/documents',
