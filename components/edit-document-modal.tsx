@@ -50,9 +50,10 @@ export function EditDocumentModal() {
   const selectableMembers = teamMembers.filter((member) => member.id !== editingDocument?.uploadedById);
 
   // Pull the document's saved allow list (only meaningful while it's sensitive).
-  const { data: accessList } = useDocumentAccessList(editingDocument?.id ?? '', {
-    enabled: isOpen && Boolean(editingDocument?.isSensitive),
-  });
+  const { data: accessList, isLoading: accessLoading } = useDocumentAccessList(
+    editingDocument?.id ?? '',
+    { enabled: isOpen && Boolean(editingDocument?.isSensitive) },
+  );
 
   function toggleAllowedUser(id: string) {
     setAllowedUserIds((prev) =>
@@ -241,7 +242,12 @@ export function EditDocumentModal() {
               sensitive folder. They still won&apos;t see the rest of that folder.
             </p>
             <div className="mt-3 max-h-44 space-y-1 overflow-y-auto rounded-md border bg-background p-1">
-              {selectableMembers.length === 0 ? (
+              {accessLoading ? (
+                <p className="flex items-center justify-center gap-2 px-2 py-3 text-center text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Loading current access…
+                </p>
+              ) : selectableMembers.length === 0 ? (
                 <p className="px-2 py-3 text-center text-xs text-muted-foreground">
                   No other team members yet.
                 </p>

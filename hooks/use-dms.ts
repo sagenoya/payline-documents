@@ -273,6 +273,9 @@ export function useDocumentAccessList(documentId: string, options?: { enabled?: 
     queryKey: ['dms', 'documentAccessList', documentId],
     queryFn: async () => (await $api.dms.getDocumentAccessList(documentId)).data,
     enabled: (options?.enabled ?? true) && Boolean(documentId),
+    // Keep the list warm so reopening the edit / access modal shows ticks instantly
+    // instead of waiting on a fresh (cold-start) round trip each time.
+    staleTime: 5 * 60_000,
   });
 }
 
