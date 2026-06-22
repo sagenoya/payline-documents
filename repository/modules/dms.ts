@@ -8,6 +8,7 @@ import type {
   ActivityLogType,
   ActivityFilter,
   DashboardData,
+  DocumentAccessList,
   DocumentSummary,
   DocumentSortBy,
   FolderDetail,
@@ -101,8 +102,26 @@ export class DmsModule extends FetchFactory {
     return this.call('GET', API_URLS.dms.document(documentId));
   }
 
-  getDocumentAccessList(documentId: string): Promise<ApiResponse<UserOption[]>> {
+  getDocumentAccessList(documentId: string): Promise<ApiResponse<DocumentAccessList>> {
     return this.call('GET', API_URLS.dms.documentAccessList(documentId));
+  }
+
+  addDocumentAccess(
+    documentId: string,
+    userIds: string[],
+  ): Promise<ApiResponse<DocumentAccessList>> {
+    return this.call('POST', API_URLS.dms.documentAccessList(documentId), {
+      body: { userIds },
+    });
+  }
+
+  revokeDocumentAccess(
+    documentId: string,
+    userId: string,
+  ): Promise<ApiResponse<{ documentId: string; userId: string }>> {
+    return this.call('DELETE', API_URLS.dms.documentAccessList(documentId), {
+      body: { userId },
+    });
   }
 
   deleteDocument(documentId: string): Promise<ApiResponse<{ id: string }>> {

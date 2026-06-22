@@ -18,6 +18,7 @@ export async function GET() {
                 folder: { select: { id: true, name: true } },
               },
             },
+            document: { select: { id: true, title: true, folder: { select: { id: true, name: true } } } },
           },
           orderBy: { createdAt: 'desc' },
           take: 30,

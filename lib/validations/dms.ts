@@ -40,3 +40,8 @@ export const categorySchema = z.object({
 export const documentAccessSchema = z.object({
   action: z.enum(ACCESS_ACTIONS as [string, ...string[]]),
 });
+
+// Add teammates to a document's allow list after upload (uploader/admin only).
+export const documentAllowAddSchema = z.object({
+  userIds: z.array(z.string().min(1)).min(1, 'Pick at least one teammate').max(50),
+});

@@ -276,6 +276,34 @@ export function useDocumentAccessList(documentId: string, options?: { enabled?: 
   });
 }
 
+export function useAddDocumentAccess(documentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userIds: string[]) => $api.dms.addDocumentAccess(documentId, userIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documentAccessList', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+    },
+  });
+}
+
+export function useRevokeDocumentAccess(documentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => $api.dms.revokeDocumentAccess(documentId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documentAccessList', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folders'] });
+      queryClient.invalidateQueries({ queryKey: ['dms', 'folder'] });
+    },
+  });
+}
+
 export function useCreateDocument() {
   const queryClient = useQueryClient();
 

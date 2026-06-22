@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Copy, Download, Eye, FolderOpen, History, Lock, Pencil, Trash2, Users } from 'lucide-react';
+import { Download, Eye, FolderOpen, History, Lock, Pencil, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
@@ -83,15 +83,6 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
     window.open(document.fileUrl, '_blank');
   }
 
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(document.fileUrl);
-      toast.success('File link copied');
-    } catch {
-      toast.error('Unable to copy file link');
-    }
-  }
-
   async function handleDelete() {
     try {
       await deleteDocument.mutateAsync(document.id);
@@ -156,19 +147,6 @@ export function DocumentActions({ document }: { document: DocumentSummary }) {
             </Button>
           </TooltipTrigger>
           <TooltipContent>Preview</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Copy link for ${document.title}`}
-              onClick={copyLink}
-            >
-              <Copy className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Copy link</TooltipContent>
         </Tooltip>
         {canEdit && (
           <Tooltip>

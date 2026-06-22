@@ -21,6 +21,11 @@ function notificationText(n: NotificationItem) {
     ? `the folder “${ar.folder.name}”`
     : `“${ar?.document?.title ?? 'a document'}”${docFolder}`;
   const who = ar?.requester.name ?? 'A teammate';
+  if (n.type === 'DOCUMENT_SHARED') {
+    const sharedFolder = n.document?.folder?.name ? ` (in “${n.document.folder.name}”)` : '';
+    const sharedDoc = `“${n.document?.title ?? 'a document'}”${sharedFolder}`;
+    return `You were given access to ${sharedDoc}. You can always open and download it.`;
+  }
   if (n.type === 'ACCESS_REQUEST') return `${who} requested access to ${target}.`;
   if (n.type === 'ACCESS_GRANTED') return `Your access to ${target} was approved for 2 hours.`;
   return `Your access request for ${target} was denied.`;
@@ -107,12 +112,12 @@ export function NotificationsBell() {
                           'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full',
                           n.type === 'ACCESS_DENIED'
                             ? 'bg-red-500/10 text-red-600'
-                            : n.type === 'ACCESS_GRANTED'
+                            : n.type === 'ACCESS_GRANTED' || n.type === 'DOCUMENT_SHARED'
                               ? 'bg-green-500/10 text-green-600'
                               : 'bg-muted text-muted-foreground',
                         )}
                       >
-                        {n.type === 'ACCESS_GRANTED' ? (
+                        {n.type === 'ACCESS_GRANTED' || n.type === 'DOCUMENT_SHARED' ? (
                           <Check className="size-3.5" />
                         ) : n.type === 'ACCESS_DENIED' ? (
                           <X className="size-3.5" />

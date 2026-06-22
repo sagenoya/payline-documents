@@ -11,6 +11,13 @@ export type BasicUser = {
 
 export type UserOption = Pick<BasicUser, 'id' | 'name' | 'email' | 'imageUrl'>;
 
+// 'everyone' = the document is open to the whole team (members lists all users);
+// 'allow-list' = a gated document whose members are the explicit allow list.
+export type DocumentAccessList = {
+  scope: 'everyone' | 'allow-list';
+  members: UserOption[];
+};
+
 export type Profile = {
   id: string;
   userId: string;
@@ -114,13 +121,18 @@ export type CreateDocumentInput = {
 
 export type AccessRequestStatus = 'PENDING' | 'APPROVED' | 'DENIED';
 
-export type NotificationType = 'ACCESS_REQUEST' | 'ACCESS_GRANTED' | 'ACCESS_DENIED';
+export type NotificationType =
+  | 'ACCESS_REQUEST'
+  | 'ACCESS_GRANTED'
+  | 'ACCESS_DENIED'
+  | 'DOCUMENT_SHARED';
 
 export type NotificationItem = {
   id: string;
   type: NotificationType;
   read: boolean;
   accessRequestId?: string | null;
+  documentId?: string | null;
   createdAt: DateLike;
   accessRequest?: {
     id: string;
@@ -132,6 +144,10 @@ export type NotificationItem = {
     }) | null;
     folder?: Pick<FolderSummary, 'id' | 'name'> | null;
   } | null;
+  // Present for DOCUMENT_SHARED (allow-list grants have no access request).
+  document?: (Pick<DocumentSummary, 'id' | 'title'> & {
+    folder?: Pick<FolderSummary, 'id' | 'name'> | null;
+  }) | null;
 };
 
 export type NotificationsResponse = {

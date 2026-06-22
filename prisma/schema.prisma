@@ -39,6 +39,7 @@ enum NotificationType {
   ACCESS_REQUEST
   ACCESS_GRANTED
   ACCESS_DENIED
+  DOCUMENT_SHARED
 }
 
 model User {
@@ -105,9 +106,11 @@ model Notification {
   userId          String
   type            NotificationType
   accessRequestId String?
+  documentId      String?
   read            Boolean          @default(false)
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessRequest   AccessRequest?   @relation(fields: [accessRequestId], references: [id], onDelete: Cascade)
+  document        Document?        @relation(fields: [documentId], references: [id], onDelete: Cascade)
   createdAt       DateTime         @default(now())
 
   @@index([userId])
@@ -164,6 +167,7 @@ model Document {
   versions       DocumentVersion[]
   accessRequests AccessRequest[]
   allowedUsers   DocumentAllow[]
+  notifications  Notification[]
   lastAccessedAt DateTime?
   deletedAt      DateTime?
   deletedById    String?

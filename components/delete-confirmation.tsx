@@ -10,6 +10,7 @@ type DeleteConfirmationProps = {
   title: string;
   description: string;
   confirmLabel?: string;
+  pendingLabel?: string;
   isPending?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -20,6 +21,7 @@ export function DeleteConfirmation({
   title,
   description,
   confirmLabel = 'Delete',
+  pendingLabel = 'Deleting...',
   isPending = false,
   onCancel,
   onConfirm,
@@ -81,7 +83,7 @@ export function DeleteConfirmation({
             Cancel
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm} disabled={isPending}>
-            {isPending ? 'Deleting...' : confirmLabel}
+            {isPending ? pendingLabel : confirmLabel}
           </Button>
         </div>
       </section>
