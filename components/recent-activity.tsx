@@ -16,13 +16,21 @@ const activityFilterLabels: Array<{ value: ActivityFilter; label: string }> = [
   { value: 'deletes', label: 'Deletes' },
 ];
 
+// Filters that surface restricted actions — only shown to activity viewers.
+const restrictedFilters = new Set<ActivityFilter>(['views', 'downloads', 'deletes']);
+
 export function RecentActivity({
   take = 15,
   showFilters = false,
+  canViewRestricted = false,
 }: {
   take?: number;
   showFilters?: boolean;
+  canViewRestricted?: boolean;
 }) {
+  const visibleFilters = canViewRestricted
+    ? activityFilterLabels
+    : activityFilterLabels.filter((item) => !restrictedFilters.has(item.value));
   const [page, setPage] = React.useState(1);
   const [filter, setFilter] = React.useState<ActivityFilter>('all');
   const { data, isLoading, isFetching } = useActivityPage(take, page, filter);
@@ -41,7 +49,7 @@ export function RecentActivity({
     return (
       <div className="space-y-3">
         {showFilters && (
-          <ActivityFilterControl value={filter} onChange={setFilter} />
+          <ActivityFilterControl value={filter} onChange={setFilter} filters={visibleFilters} />
         )}
         <div className="rounded-lg border border-dashed bg-background p-8 text-center">
           <p>{filter === 'all' ? 'No document activity yet.' : 'No activity matches this filter.'}</p>
@@ -53,7 +61,7 @@ export function RecentActivity({
   return (
     <div className="space-y-4">
       {showFilters && (
-        <ActivityFilterControl value={filter} onChange={setFilter} />
+        <ActivityFilterControl value={filter} onChange={setFilter} filters={visibleFilters} />
       )}
       <div className="divide-y rounded-lg border bg-background">
         {activity.map((item) => {
@@ -116,13 +124,15 @@ export function RecentActivity({
 function ActivityFilterControl({
   value,
   onChange,
+  filters,
 }: {
   value: ActivityFilter;
   onChange: (value: ActivityFilter) => void;
+  filters: Array<{ value: ActivityFilter; label: string }>;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {activityFilterLabels.map((item) => (
+      {filters.map((item) => (
         <button
           key={item.value}
           type="button"

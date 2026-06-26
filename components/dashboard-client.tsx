@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Files, FolderOpen, Lock, Upload, Users } from 'lucide-react';
+import { Files, FolderOpen, Upload, Users } from 'lucide-react';
 import { DashboardRecentUploads } from '@/components/dashboard-recent-uploads';
 import { RecentActivity } from '@/components/recent-activity';
 import { Badge } from '@/components/ui/badge';
@@ -65,36 +65,12 @@ export function DashboardClient() {
         </div>
         <div className="space-y-3">
           <h2 className="text-base">Activity</h2>
-          {user?.canViewActivity ? (
-            <>
-              <RecentActivity take={15} />
-              <div className="pt-2 text-right">
-                <Link href="/activity" className="text-sm font-medium text-primary hover:underline">
-                  See all activity &rarr;
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="relative overflow-hidden rounded-lg border bg-background">
-              <div className="divide-y blur-sm select-none" aria-hidden>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3">
-                    <div className="mt-0.5 size-8 shrink-0 rounded-md bg-muted" />
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <div className="h-3.5 w-3/4 rounded bg-muted" />
-                      <div className="h-3 w-1/3 rounded bg-muted" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/40 p-4 text-center">
-                <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <Lock className="size-4" />
-                </div>
-                <p className="text-sm font-medium text-foreground">Restricted</p>
-              </div>
-            </div>
-          )}
+          <RecentActivity take={15} canViewRestricted={user?.canViewActivity} />
+          <div className="pt-2 text-right">
+            <Link href="/activity" className="text-sm font-medium text-primary hover:underline">
+              See all activity &rarr;
+            </Link>
+          </div>
         </div>
       </section>
     </div>
